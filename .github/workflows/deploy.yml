@@ -1,0 +1,36 @@
+name: Deploy KCTI RAG to On-Premise Server
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: # GitHub 웹 화면에서 [Run workflow] 버튼으로 수동 실행 가능
+
+jobs:
+  deploy:
+    name: Deploy to On-Premise Server
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: SSH into server & Deploy
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script_stop: true
+        script: |
+          echo "🚀 [CI/CD] 최신 코드 배포 시작..."
+          cd /home/docker/rag/kcti_rag
+          
+          echo "📥 [1/3] Git Pull 최신 커밋 반영"
+          git pull origin main
+          
+          echo "🐳 [2/3] Docker Compose 무중단 재빌드 및 컨테이너 기동"
+          docker compose up -d --build
+          
+          echo "🧹 [3/3] 빌드 찌꺼기 이미지 정리"
+          docker image prune -f
+          
+          echo "✅ [CI/CD] KCTI RAG 배포가 성공적으로 완료되었습니다!"
