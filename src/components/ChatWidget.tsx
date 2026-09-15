@@ -146,7 +146,7 @@ export default function ChatWidget() {
         userDept === '관광정책실' ? r.category === '관광' :
         userDept === '문화예술본부' ? r.category === '문화예술' :
         userDept === '콘텐츠산업본부' ? r.category === '콘텐츠' :
-        (r.category === '통계' || r.title.includes('통계') || r.title.includes('분석') || r.title.includes('실태'))
+        (r.category === '통계정책' || r.title.includes('통계') || r.title.includes('분석') || r.title.includes('실태'))
       ).slice(0, 2);
     }
 
