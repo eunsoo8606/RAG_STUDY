@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  # 1. KCTI RAG 백엔드 (FastAPI + ChromaDB + 시맨틱 벡터 엔진)
+  kcti-rag-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: kcti-rag-backend
+    ports:
+      - "8002:8000"  # 사내 서버 충돌 방지: 8000/8001 점유로 인해 8002 사용
+    env_file:
+      - ./backend/.env
+    volumes:
+      # 호스트 하드디스크와 컨테이너 내부를 연결하여 데이터 100% 영구 보존
+      - ./backend/chroma_db:/app/chroma_db
+      - ./backend/feedback.db:/app/feedback.db
+      - ./backend/dept_vectors.json:/app/dept_vectors.json
+      - ./backend/intent_vectors.json:/app/intent_vectors.json
+    restart: unless-stopped
+
+  # 2. KCTI 포털 프론트엔드 (Next.js 웹 화면)
+  kcti-portal-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kcti-portal-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8002
+    depends_on:
+      - kcti-rag-backend
+    restart: unless-stopped
