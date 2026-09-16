@@ -6,6 +6,7 @@ import {
   BookOpen, Building2, ChevronRight, CheckCircle2, Search, ExternalLink 
 } from 'lucide-react';
 import { KCTI_REPORTS, KctiReport } from '@/data/kctiReports';
+import { executeRagSearch } from '@/services/ragEngine';
 
 interface Message {
   id: string;
@@ -16,6 +17,7 @@ interface Message {
   similarityScore?: number;
   referencedReports?: KctiReport[];
   feedbackGiven?: 'up' | 'down' | null;
+  suggestedQueries?: string[];
 }
 
 export default function ChatWidget() {
@@ -77,10 +79,14 @@ export default function ChatWidget() {
       return process.env.NEXT_PUBLIC_API_URL;
     }
     if (typeof window !== 'undefined') {
-      // 도커 배포 환경: 프론트엔드 호스트(사내서버 IP)의 8002 포트로 동적 연결
+      // 로컬 개발 환경(localhost): FastAPI 기본 포트 8000 직접 연결
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:8000';
+      }
+      // 사내 온프레미스 서버 배포 환경: 8002 포트로 동적 연결
       return `${window.location.protocol}//${window.location.hostname}:8002`;
     }
-    return 'http://localhost:8002';
+    return 'http://localhost:8000';
   };
 
   const generateBotResponse = async (query: string) => {
@@ -114,58 +120,59 @@ export default function ChatWidget() {
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           intentTag: data.intent_tag,
           similarityScore: Math.round(data.similarity),
-          referencedReports: uniqueReports
+          referencedReports: uniqueReports,
+          suggestedQueries: data.suggested_queries || []
         };
         setMessages((prev) => [...prev, botMsg]);
         return;
       }
     } catch (err) {
-      // 백엔드 컨테이너 미기동 시 프론트엔드 자체 Fallback 처리
-      console.log('[FastAPI Offline] Running Local RAG Fallback...');
+      console.warn('[FastAPI Offline]: Could not connect to backend server at ' + getApiBaseUrl());
+      showToast('⚠️ 백엔드(FastAPI 8000) 미연결: 로컬 내장 RAG 엔진으로 응답합니다.');
     } finally {
       setIsLoading(false);
     }
 
-    // 2. Local Fallback (FastAPI 서버가 아직 기동되지 않았을 때 안전장치)
-    const qLower = query.toLowerCase();
-    let intentTag = '연구보고서 검색';
-    if (qLower.includes('통계') || qLower.includes('수치') || qLower.includes('얼마') || qLower.includes('실태') || qLower.includes('수요')) {
-      intentTag = '통계 지표 조회';
-    } else if (qLower.includes('영향') || qLower.includes('효과') || qLower.includes('전략')) {
-      intentTag = '정책 효과 분석';
-    }
-
-    let matchedReports = KCTI_REPORTS.filter((rep) => {
-      const matchInTitle = rep.title.toLowerCase().includes(qLower);
-      const matchInKeywords = rep.keywords.some((k) => qLower.includes(k.toLowerCase()) || k.toLowerCase().includes(qLower));
-      return matchInTitle || matchInKeywords;
+    // 2. Local Fallback: 프론트엔드 RAG 엔진(executeRagSearch) 호출
+    // Why: 키워드 하드코딩을 100% 제거하고, 기 구축된 시맨틱 유사도 엔진과 청크 단위 랭킹을 정식 활용
+    const ragResult = executeRagSearch(query, {
+      topK: 2,
+      threshold: 0.5,
+      isRagEnabled: true,
+      userDepartment: userDept
     });
 
-    if (matchedReports.length === 0) {
-      matchedReports = KCTI_REPORTS.filter((r) => 
-        userDept === '관광정책실' ? r.category === '관광' :
-        userDept === '문화예술본부' ? r.category === '문화예술' :
-        userDept === '콘텐츠산업본부' ? r.category === '콘텐츠' :
-        (r.category === '통계정책' || r.title.includes('통계') || r.title.includes('분석') || r.title.includes('실태'))
-      ).slice(0, 2);
-    }
+    const primaryChunk = ragResult.retrievedChunks[0];
+    const primaryReport = primaryChunk ? primaryChunk.report : (ragResult.referencedReports[0] || KCTI_REPORTS[0]);
+    const selectedPage = primaryChunk ? primaryChunk.chunk.pageNumber : (primaryReport.chunks[0]?.pageNumber || 1);
+    const selectedContent = primaryChunk ? primaryChunk.chunk.content : primaryReport.summary;
+    const similarityScore = primaryChunk ? Math.round(primaryChunk.similarityScore * 100) : 85;
 
-    const primaryReport = matchedReports[0] || KCTI_REPORTS[0];
-    const similarityScore = Math.floor(88 + Math.random() * 10);
+    // 추천 질문 생성: 2순위 검색 보고서 및 연계 과제를 기반으로 동적 구성
+    const secondReport = ragResult.referencedReports[1] || KCTI_REPORTS.find((r) => r.id !== primaryReport.id);
+    const fallbackSuggestedQueries = [
+      `<${primaryReport.title}>의 구체적인 정책 제언과 실행 방안은?`,
+      secondReport ? `<${secondReport.title}>의 주요 분석 결과 및 정책적 시사점` : `방한 외국인 관광객 3천만 달성 전략 알려줘`,
+      `주 4.5일제가 국내 관광에 미치는 영향은?`
+    ];
 
-    const botText = `KCTI 연구성과 DB 검색 결과, **<${primaryReport.title}>** [1] 보고서의 분석 내용입니다.\n\n` +
-      `• **주요 분석 결과**: ${primaryReport.chunks[0]?.content || primaryReport.summary}\n\n` +
-      `• **정책적 제언**: ${primaryReport.policyImplications} [1]\n\n` +
-      `📌 *상세 출처 [1]을 클릭하시면 해당 연구보고서의 원문 발췌문을 확인하실 수 있습니다.*`;
+    const curatedReport = {
+      ...primaryReport,
+      page_no: selectedPage,
+      content: selectedContent,
+      similarity: similarityScore,
+      is_primary: true
+    };
 
     const botMsg: Message = {
       id: 'bot-' + Date.now(),
       sender: 'bot',
-      text: botText,
+      text: ragResult.answerText,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      intentTag: `${intentTag} (신뢰도 95%)`,
+      intentTag: `${ragResult.intentResult.intentLabel} (신뢰도 ${Math.round(ragResult.intentResult.confidence * 100)}%)`,
       similarityScore: similarityScore,
-      referencedReports: [primaryReport]
+      referencedReports: [curatedReport as any],
+      suggestedQueries: fallbackSuggestedQueries
     };
 
     setMessages((prev) => [...prev, botMsg]);
@@ -350,12 +357,36 @@ export default function ChatWidget() {
                 <span style={{ fontSize: '11px', color: '#90caf9' }}>연구성과 DB 의미검색 (RAG) 가동중</span>
               </div>
             </div>
-            <button 
-              onClick={() => setIsOpen(false)}
-              style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer' }}
-            >
-              <X size={20} />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <a 
+                href="http://localhost:8000/admin" 
+                target="_blank" 
+                rel="noreferrer"
+                title="ChromaDB 데이터 및 벡터 검색 실시간 관리자 콘솔 열기"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.15)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  color: '#e0f2fe',
+                  padding: '3px 8px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  textDecoration: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontWeight: 600,
+                  transition: 'background 0.2s'
+                }}
+              >
+                <ExternalLink size={12} /> ChromaDB 관리자
+              </a>
+              <button 
+                onClick={() => setIsOpen(false)}
+                style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
           </div>
 
           {/* SFR-014: 사용자 소속 부서 선택 바 (개인화 추천 연계) */}
@@ -532,8 +563,8 @@ export default function ChatWidget() {
                               <button
                                 onClick={() => setSelectedSnippet({
                                   title: rep.title,
-                                  content: rep.chunks?.[0]?.content || (rep as any).content || rep.summary,
-                                  page: rep.chunks?.[0]?.pageNumber || (rep as any).page_no || 1
+                                  content: (rep as any).content || rep.chunks?.[0]?.content || rep.summary,
+                                  page: (rep as any).page_no || rep.chunks?.[0]?.pageNumber || 1
                                 })}
                                 style={{
                                   background: '#eff6ff',
@@ -555,6 +586,68 @@ export default function ChatWidget() {
                           </div>
                         );
                       })}
+                  </div>
+                )}
+
+                {/* SFR-011: 답변 맥락 맞춤형 동적 추천 질문 가이드 버튼 */}
+                {m.sender === 'bot' && m.suggestedQueries && m.suggestedQueries.length > 0 && (
+                  <div style={{
+                    marginTop: '8px',
+                    width: '100%',
+                    maxWidth: '88%',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    padding: '10px 12px'
+                  }}>
+                    <div style={{
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      color: '#0369a1',
+                      marginBottom: '6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}>
+                      <Sparkles size={12} /> 💡 답변 맥락 추천 질문 (SFR-011):
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      {m.suggestedQueries.map((qText, qIdx) => (
+                        <button
+                          key={qIdx}
+                          onClick={() => handleChipClick(qText)}
+                          style={{
+                            background: '#ffffff',
+                            border: '1px solid #bae6fd',
+                            borderRadius: '8px',
+                            padding: '6px 10px',
+                            fontSize: '11.5px',
+                            color: '#0f172a',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '6px',
+                            transition: 'all 0.15s'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#f0f9ff';
+                            e.currentTarget.style.borderColor = '#38bdf8';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = '#ffffff';
+                            e.currentTarget.style.borderColor = '#bae6fd';
+                          }}
+                        >
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            💬 {qText}
+                          </span>
+                          <ChevronRight size={13} color="#0284c7" style={{ flexShrink: 0 }} />
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
 
@@ -666,92 +759,147 @@ export default function ChatWidget() {
             }
           `}</style>
 
-          {/* SFR-011 & SFR-014: 도메인별 추천 질문 가이드 칩 */}
-          <div style={{
-            padding: '8px 16px',
-            background: '#ffffff',
-            borderTop: '1px solid #e2e8f0',
-            display: 'flex',
-            gap: '8px',
-            overflowX: 'auto',
-            whiteSpace: 'nowrap'
-          }}>
-            <button
-              onClick={() => handleChipClick('방한 외국인 관광객 3천만 달성 전략 알려줘')}
-              style={{
-                background: '#f1f5f9',
-                border: '1px solid #cbd5e1',
-                padding: '4px 10px',
-                borderRadius: '12px',
-                fontSize: '11px',
-                color: '#334155',
-                cursor: 'pointer',
-                fontWeight: 600
-              }}
-            >
-              🎯 방한 외래객 3천만 전략
-            </button>
-            <button
-              onClick={() => handleChipClick('티켓 할인이 공연 관람 및 티켓 판매에 미치는 통계 분석 결과')}
-              style={{
-                background: '#f1f5f9',
-                border: '1px solid #cbd5e1',
-                padding: '4px 10px',
-                borderRadius: '12px',
-                fontSize: '11px',
-                color: '#334155',
-                cursor: 'pointer',
-                fontWeight: 600
-              }}
-            >
-              📊 공연 티켓할인 수요통계
-            </button>
-            <button
-              onClick={() => handleChipClick('주 4.5일제가 국내 관광에 미치는 영향은?')}
-              style={{
-                background: '#f1f5f9',
-                border: '1px solid #cbd5e1',
-                padding: '4px 10px',
-                borderRadius: '12px',
-                fontSize: '11px',
-                color: '#334155',
-                cursor: 'pointer',
-                fontWeight: 600
-              }}
-            >
-              🕒 주 4.5일제와 국내관광
-            </button>
-            <button
-              onClick={() => handleChipClick('외래관광객 실태조사 소비 및 체재일수 통계')}
-              style={{
-                background: '#f1f5f9',
-                border: '1px solid #cbd5e1',
-                padding: '4px 10px',
-                borderRadius: '12px',
-                fontSize: '11px',
-                color: '#334155',
-                cursor: 'pointer',
-                fontWeight: 600
-              }}
-            >
-              📈 외래객 실태조사 통계
-            </button>
-            <button
-              onClick={() => handleChipClick('K-콘텐츠 글로벌 수출 파급효과와 지식재산권 전략')}
-              style={{
-                background: '#f1f5f9',
-                border: '1px solid #cbd5e1',
-                padding: '4px 10px',
-                borderRadius: '12px',
-                fontSize: '11px',
-                color: '#334155',
-                cursor: 'pointer',
-                fontWeight: 600
-              }}
-            >
-              🎬 K-콘텐츠 수출 파급효과
-            </button>
-          </div>
+          {/* SFR-011: 답변 맥락 연동 동적 추천 질문 가이드 칩 */}
+          {(() => {
+            const latestSuggestedQueries = messages
+              .slice()
+              .reverse()
+              .find((m) => m.sender === 'bot' && m.suggestedQueries && m.suggestedQueries.length > 0)
+              ?.suggestedQueries;
+
+            const isDynamic = Boolean(latestSuggestedQueries && latestSuggestedQueries.length > 0);
+
+            return (
+              <div style={{
+                padding: '8px 16px',
+                background: isDynamic ? '#f0f9ff' : '#ffffff',
+                borderTop: '1px solid #e2e8f0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                overflowX: 'auto',
+                whiteSpace: 'nowrap',
+                transition: 'background 0.2s'
+              }}>
+                <span style={{
+                  fontSize: '11px',
+                  fontWeight: 800,
+                  color: isDynamic ? '#0284c7' : '#64748b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                  flexShrink: 0
+                }}>
+                  <Sparkles size={12} /> {isDynamic ? '맥락 추천:' : '추천 가이드:'}
+                </span>
+                {isDynamic && latestSuggestedQueries ? (
+                  latestSuggestedQueries.map((qText, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleChipClick(qText)}
+                      style={{
+                        background: '#ffffff',
+                        border: '1px solid #38bdf8',
+                        padding: '4px 10px',
+                        borderRadius: '12px',
+                        fontSize: '11px',
+                        color: '#0369a1',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        boxShadow: '0 1px 3px rgba(56, 189, 248, 0.15)',
+                        flexShrink: 0
+                      }}
+                    >
+                      💬 {qText}
+                    </button>
+                  ))
+                ) : (
+                  <>
+                    <button
+                      onClick={() => handleChipClick('방한 외국인 관광객 3천만 달성 전략 알려줘')}
+                      style={{
+                        background: '#f1f5f9',
+                        border: '1px solid #cbd5e1',
+                        padding: '4px 10px',
+                        borderRadius: '12px',
+                        fontSize: '11px',
+                        color: '#334155',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        flexShrink: 0
+                      }}
+                    >
+                      🎯 방한 외래객 3천만 전략
+                    </button>
+                    <button
+                      onClick={() => handleChipClick('티켓 할인이 공연 관람 및 티켓 판매에 미치는 통계 분석 결과')}
+                      style={{
+                        background: '#f1f5f9',
+                        border: '1px solid #cbd5e1',
+                        padding: '4px 10px',
+                        borderRadius: '12px',
+                        fontSize: '11px',
+                        color: '#334155',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        flexShrink: 0
+                      }}
+                    >
+                      📊 공연 티켓할인 수요통계
+                    </button>
+                    <button
+                      onClick={() => handleChipClick('주 4.5일제가 국내 관광에 미치는 영향은?')}
+                      style={{
+                        background: '#f1f5f9',
+                        border: '1px solid #cbd5e1',
+                        padding: '4px 10px',
+                        borderRadius: '12px',
+                        fontSize: '11px',
+                        color: '#334155',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        flexShrink: 0
+                      }}
+                    >
+                      🕒 주 4.5일제와 국내관광
+                    </button>
+                    <button
+                      onClick={() => handleChipClick('외래관광객 실태조사 소비 및 체재일수 통계')}
+                      style={{
+                        background: '#f1f5f9',
+                        border: '1px solid #cbd5e1',
+                        padding: '4px 10px',
+                        borderRadius: '12px',
+                        fontSize: '11px',
+                        color: '#334155',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        flexShrink: 0
+                      }}
+                    >
+                      📈 외래객 실태조사 통계
+                    </button>
+                    <button
+                      onClick={() => handleChipClick('K-콘텐츠 글로벌 수출 파급효과와 지식재산권 전략')}
+                      style={{
+                        background: '#f1f5f9',
+                        border: '1px solid #cbd5e1',
+                        padding: '4px 10px',
+                        borderRadius: '12px',
+                        fontSize: '11px',
+                        color: '#334155',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        flexShrink: 0
+                      }}
+                    >
+                      🎬 K-콘텐츠 수출 파급효과
+                    </button>
+                  </>
+                )}
+              </div>
+            );
+          })()}
 
           {/* 입력창 */}
           <form

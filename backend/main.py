@@ -26,6 +26,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ChromaDB 웹 어드민 콘솔 라우터 등록 (/admin)
+from admin_ui import admin_router
+app.include_router(admin_router)
+
 class ChatRequest(BaseModel):
     query: str
     user_dept: Optional[str] = "관광정책실"
@@ -77,19 +81,25 @@ def handle_chat(req: ChatRequest):
     )
     primary = matched_reports[0] if matched_reports else None
 
-    # 3. [SFR-013] 팩트 그라운딩(Fact-grounded) AI 브리핑 생성
-    # Why: 임의의 외부 지식으로 지어내지 않고(할루시네이션 방지), 오직 발췌 문단 원문만을 근거로 각주 [1] 표기
+    # 3. [SFR-011 & SFR-013] 팩트 그라운딩 AI 브리핑 및 답변 맥락 추천 질문 생성
+    # Why: 오직 발췌 문단 원문만을 근거로 각주 [1]을 표기하며, 맥락에 맞춘 후속 질문 3건을 동적으로 생성
     if primary:
-        answer_text = generate_rag_answer_with_ai(req.query, primary)
+        answer_text, suggested_queries = generate_rag_answer_with_ai(req.query, primary)
     else:
         answer_text = "문의하신 내용과 일치하는 연구보고서를 찾지 못했습니다. 보다 구체적인 정책·통계 질문을 입력해 주세요."
+        suggested_queries = [
+            "방한 외국인 관광객 3천만 달성 전략 알려줘",
+            "주 4.5일제가 국내 관광에 미치는 영향은?",
+            "티켓 할인이 공연 관람 및 티켓 판매에 미치는 통계 분석 결과"
+        ]
 
-    # 4. [SFR-011] 카드형 답변 및 UI 렌더링을 위한 데이터 반환
+    # 4. [SFR-011] 카드형 답변 및 답변 맥락 동적 추천 질문 데이터 반환
     return {
         "answer": answer_text,
         "intent_tag": f"{intent_info['intent']} (신뢰도 {int(intent_info['confidence'] * 100)}%)",
         "similarity": primary["similarity"] if primary else 85.0,
-        "referenced_reports": matched_reports
+        "referenced_reports": matched_reports,
+        "suggested_queries": suggested_queries
     }
 
 @app.post("/api/feedback")

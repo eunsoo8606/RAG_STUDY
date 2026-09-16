@@ -344,24 +344,73 @@ def search_reports_from_vector_db(query: str, user_dept: str = "관광정책실"
         return final_reports
 
     except Exception as e:
-        print(f"[Vector Search Error]: {e}")
+        print(f"[Vector Search Fallback - Error occurred]: {e}")
+        # 하이브리드 안전망: Gemini API 장애/쿼터 초과 시 로컬 ChromaDB 텍스트 매칭으로 자동 복구
+        try:
+            keywords = [w for w in re.split(r'\s+', query) if len(w) >= 2 and w not in ['관련', '보고서', '찾아줘', '알려줘', '대해']]
+            target_kw = keywords[0] if keywords else "보고서"
+            matched_docs = collection.get(
+                where_document={"$contains": target_kw},
+                limit=5,
+                include=["documents", "metadatas"]
+            )
+            if matched_docs and matched_docs["ids"]:
+                fallback_list = []
+                for i in range(len(matched_docs["ids"])):
+                    meta = matched_docs["metadatas"][i]
+                    fallback_list.append({
+                        "report_id": meta.get("report_id", matched_docs["ids"][i]),
+                        "title": meta.get("title", "연구보고서"),
+                        "department": meta.get("department", "문화예술본부"),
+                        "authors": meta.get("authors", "KCTI 연구진"),
+                        "publish_date": meta.get("publish_date", "2025.01"),
+                        "summary": meta.get("summary", ""),
+                        "policy_implications": meta.get("policy_implications", ""),
+                        "page_no": meta.get("page_no", 1),
+                        "content": matched_docs["documents"][i],
+                        "chunk_id": matched_docs["ids"][i],
+                        "similarity": 88.5,
+                        "is_primary": (i == 0),
+                        "is_recommended": False
+                    })
+                return fallback_list[:2]
+        except Exception as fb_err:
+            print(f"[Hybrid Fallback Error]: {fb_err}")
         return []
 
 
 # ==============================================================================
-# [SFR-013] 팩트 그라운딩(Fact Grounding) AI 브리핑 및 출처 각주 [1] 생성
+# [SFR-011 & SFR-013] 팩트 그라운딩 AI 브리핑 및 답변 맥락 동적 추천 질문 생성
 # ==============================================================================
-def generate_rag_answer_with_ai(query: str, primary_report: Dict[str, Any]) -> str:
+def _build_context_suggested_queries(report: Dict[str, Any], query: str) -> List[str]:
     """
-    [SFR-013] LLM 팩트 그라운딩 브리핑 합성
+    [SFR-011] 검색된 연구보고서 메타데이터 및 질의 맥락에 기반한 동적 후속 추천 질문 자동 조합 (Fallback 포함)
+    """
+    title = report.get("title", "")
+    dept = report.get("department", "연구부서")
+    
+    return [
+        f"<{title}> 연구의 구체적인 정책 제언과 실행 방안은?",
+        f"<{title}> 관련 핵심 통계 지표 및 실태 조사 결과",
+        f"{dept}의 향후 후속 과제 및 연계 연구 동향"
+    ]
+
+
+def generate_rag_answer_with_ai(query: str, primary_report: Dict[str, Any]) -> tuple[str, List[str]]:
+    """
+    [SFR-011 & SFR-013] LLM 팩트 그라운딩 브리핑 및 답변 맥락 동적 추천 질문(3건) 동시 생성
     
     [처리 과정]
     1. Context Injection: 벡터 DB에서 검색된 실제 KCTI 보고서 원문(제목, 발간일, 발췌 문단)을 프롬프트에 주입
     2. 할루시네이션 원천 차단: "원문에 명시된 사실만 근거로 답할 것"을 시스템 프롬프트로 강제
     3. 출처 각주 [1] 의무화: 공공기관 감사 및 검증을 위해 핵심 문장 끝에 각주 [1] 표기 강제
+    4. [SFR-011] 동적 추천 질문 생성: 답변 맥락에 맞춘 후속 질문 3개를 ---RECOMMENDED_QUERIES--- 구분자로 동시 생성 및 분리 파싱
     
-    Why: AI가 외부 지식을 상상해서 지어내지 못하게 족쇄를 채워 공공기관 신뢰도를 100% 확보
+    Why: 단일 LLM 호출로 답변 브리핑과 맥락 맞춤형 후속 질문 가이드를 동시에 생성하여 API 지연 및 비용 최소화
     """
+    suggested_queries: List[str] = []
+    answer_text = ""
+
     if gemini_model:
         prompt = f"""
     당신은 한국문화관광연구원(KCTI)의 인공지능 수석 연구원입니다.
@@ -371,6 +420,11 @@ def generate_rag_answer_with_ai(query: str, primary_report: Dict[str, Any]) -> s
     1. 허위 사실을 지어내지 말고, 오직 아래 보고서 내용에 있는 사실만 기반으로 답변할 것.
     2. 답변 마지막이나 핵심 문장 끝에 반드시 출처 각주 '[1]'을 표기할 것.
     3. 3~4개의 간결한 불릿 포인트 또는 문단으로 가독성 좋게 정리할 것.
+    4. [SFR-011] 답변 완료 후, 질문자가 이어서 질문하면 좋을 [답변 맥락 추천 후속 질문] 3개를 반드시 맨 마지막에 다음 형식으로 작성할 것:
+    ---RECOMMENDED_QUERIES---
+    - 추천질문 1
+    - 추천질문 2
+    - 추천질문 3
 
     [KCTI 연구보고서 원문]
     - 보고서 제목: {primary_report['title']} (발간일: {primary_report['publish_date']}, 저자: {primary_report['authors']})
@@ -383,17 +437,40 @@ def generate_rag_answer_with_ai(query: str, primary_report: Dict[str, Any]) -> s
         try:
             response = gemini_model.generate_content(prompt)
             if response and response.text:
-                return response.text.strip()
+                full_text = response.text.strip()
+                if "---RECOMMENDED_QUERIES---" in full_text:
+                    parts = full_text.split("---RECOMMENDED_QUERIES---")
+                    answer_text = parts[0].strip()
+                    query_lines = parts[1].strip().split("\n")
+                    for line in query_lines:
+                        clean_q = re.sub(r"^[-*•\d\.\s]+", "", line).strip()
+                        if clean_q and len(clean_q) > 3:
+                            suggested_queries.append(clean_q)
+                    suggested_queries = suggested_queries[:3]
+                else:
+                    answer_text = full_text
         except Exception as e:
             print(f"[Gemini Generate Error]: {e}")
 
-    # Fallback: AI 호출 일시 장애 시 팩트 기반 정형 템플릿 반환
-    return (
-        f"KCTI 연구성과 DB 검색 결과, **<{primary_report['title']}>** [1] 보고서의 분석 내용입니다.\n\n"
-        f"• **주요 분석 결과**: {primary_report['content']}\n\n"
-        f"• **정책적 제언**: {primary_report['policy_implications']} [1]\n\n"
-        f"📌 *상세 출처 [1]을 클릭하시면 해당 연구보고서의 원문 발췌문(p.{primary_report['page_no']})을 확인하실 수 있습니다.*"
-    )
+    # Fallback: AI 호출 실패 시 정형 템플릿 사용
+    if not answer_text:
+        answer_text = (
+            f"KCTI 연구성과 DB 검색 결과, **<{primary_report['title']}>** [1] 보고서의 분석 내용입니다.\n\n"
+            f"• **주요 분석 결과**: {primary_report['content']}\n\n"
+            f"• **정책적 제언**: {primary_report['policy_implications']} [1]\n\n"
+            f"*상세 출처 [1]을 클릭하시면 해당 연구보고서의 원문 발췌문(p.{primary_report['page_no']})을 확인하실 수 있습니다.*"
+        )
+
+    # 추천 질문 파싱 실패 또는 3개 미만일 경우 맥락 기반 Fallback 질문으로 채움
+    if len(suggested_queries) < 3:
+        fallback_queries = _build_context_suggested_queries(primary_report, query)
+        for fq in fallback_queries:
+            if fq not in suggested_queries:
+                suggested_queries.append(fq)
+            if len(suggested_queries) >= 3:
+                break
+
+    return answer_text, suggested_queries
 
 
 # ==============================================================================
