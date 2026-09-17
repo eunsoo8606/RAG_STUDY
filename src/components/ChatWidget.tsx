@@ -3,10 +3,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   MessageSquare, X, Send, ThumbsUp, ThumbsDown, Sparkles, 
-  BookOpen, Building2, ChevronRight, CheckCircle2, Search, ExternalLink 
+  BookOpen, Building2, ChevronRight, CheckCircle2, Search, ExternalLink, AlertTriangle
 } from 'lucide-react';
-import { KCTI_REPORTS, KctiReport } from '@/data/kctiReports';
-import { executeRagSearch } from '@/services/ragEngine';
 
 interface Message {
   id: string;
@@ -15,7 +13,7 @@ interface Message {
   timestamp: string;
   intentTag?: string;
   similarityScore?: number;
-  referencedReports?: KctiReport[];
+  referencedReports?: any[];
   feedbackGiven?: 'up' | 'down' | null;
   suggestedQueries?: string[];
 }
@@ -75,23 +73,22 @@ export default function ChatWidget() {
   };
 
   const getApiBaseUrl = () => {
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      return process.env.NEXT_PUBLIC_API_URL;
-    }
     if (typeof window !== 'undefined') {
-      // 로컬 개발 환경(localhost): FastAPI 기본 포트 8000 직접 연결
+      // 로컬 개발 환경(localhost / 127.0.0.1): FastAPI 기본 포트 8000 직접 연결
       if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return 'http://localhost:8000';
+        return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       }
-      // 사내 온프레미스 서버 배포 환경: 8002 포트로 동적 연결
-      return `${window.location.protocol}//${window.location.hostname}:8002`;
+      // Nginx 리버스 프록시 및 운영 도메인 환경(kcti-rag.datatree21.com 등):
+      // Nginx location /api/ 설정에 따라 포트 번호 없이 동일 오리진 상대 경로 사용
+      return '';
     }
-    return 'http://localhost:8000';
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   };
 
   const generateBotResponse = async (query: string) => {
+    setIsLoading(true);
     try {
-      // 1. 실제 FastAPI RAG 백엔드 호출 시도
+      // 1. 실제 FastAPI RAG 백엔드 호출 (Nginx 리버스 프록시 또는 로컬 개발 서버)
       const res = await fetch(`${getApiBaseUrl()}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -125,57 +122,27 @@ export default function ChatWidget() {
         };
         setMessages((prev) => [...prev, botMsg]);
         return;
+      } else {
+        throw new Error(`백엔드 서버 응답 실패 (HTTP ${res.status})`);
       }
-    } catch (err) {
-      console.warn('[FastAPI Offline]: Could not connect to backend server at ' + getApiBaseUrl());
-      showToast('⚠️ 백엔드(FastAPI 8000) 미연결: 로컬 내장 RAG 엔진으로 응답합니다.');
+    } catch (err: any) {
+      console.error('[RAG Backend 통신 장애]:', err);
+      // 목데이터 폴백을 완전 배제하고, 사용자에게 정직하고 명확한 네트워크/서버 장애 안내 표시
+      const errorMsg: Message = {
+        id: 'bot-err-' + Date.now(),
+        sender: 'bot',
+        text: `⚠️ **RAG 백엔드 서버와 통신할 수 없습니다.**\n\nAI 지능형 검색 백엔드(FastAPI 8002 / ChromaDB) 응답을 수신하지 못했습니다.\n\n- **원인**: 백엔드 컨테이너 상태, 사내망 통신 또는 Nginx 프록시 지연\n- **조치**: 서버 상태를 확인하신 후 잠시 후 다시 질문해 주세요.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        intentTag: '네트워크 연결 오류',
+        similarityScore: 0,
+        referencedReports: [],
+        suggestedQueries: ['다시 시도하기']
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+      showToast('⚠️ 백엔드 AI 서버 통신에 실패했습니다.');
     } finally {
       setIsLoading(false);
     }
-
-    // 2. Local Fallback: 프론트엔드 RAG 엔진(executeRagSearch) 호출
-    // Why: 키워드 하드코딩을 100% 제거하고, 기 구축된 시맨틱 유사도 엔진과 청크 단위 랭킹을 정식 활용
-    const ragResult = executeRagSearch(query, {
-      topK: 2,
-      threshold: 0.5,
-      isRagEnabled: true,
-      userDepartment: userDept
-    });
-
-    const primaryChunk = ragResult.retrievedChunks[0];
-    const primaryReport = primaryChunk ? primaryChunk.report : (ragResult.referencedReports[0] || KCTI_REPORTS[0]);
-    const selectedPage = primaryChunk ? primaryChunk.chunk.pageNumber : (primaryReport.chunks[0]?.pageNumber || 1);
-    const selectedContent = primaryChunk ? primaryChunk.chunk.content : primaryReport.summary;
-    const similarityScore = primaryChunk ? Math.round(primaryChunk.similarityScore * 100) : 85;
-
-    // 추천 질문 생성: 2순위 검색 보고서 및 연계 과제를 기반으로 동적 구성
-    const secondReport = ragResult.referencedReports[1] || KCTI_REPORTS.find((r) => r.id !== primaryReport.id);
-    const fallbackSuggestedQueries = [
-      `<${primaryReport.title}>의 구체적인 정책 제언과 실행 방안은?`,
-      secondReport ? `<${secondReport.title}>의 주요 분석 결과 및 정책적 시사점` : `방한 외국인 관광객 3천만 달성 전략 알려줘`,
-      `주 4.5일제가 국내 관광에 미치는 영향은?`
-    ];
-
-    const curatedReport = {
-      ...primaryReport,
-      page_no: selectedPage,
-      content: selectedContent,
-      similarity: similarityScore,
-      is_primary: true
-    };
-
-    const botMsg: Message = {
-      id: 'bot-' + Date.now(),
-      sender: 'bot',
-      text: ragResult.answerText,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      intentTag: `${ragResult.intentResult.intentLabel} (신뢰도 ${Math.round(ragResult.intentResult.confidence * 100)}%)`,
-      similarityScore: similarityScore,
-      referencedReports: [curatedReport as any],
-      suggestedQueries: fallbackSuggestedQueries
-    };
-
-    setMessages((prev) => [...prev, botMsg]);
   };
 
   // SFR-015: 피드백 수집 및 Oracle DB 로그 적재

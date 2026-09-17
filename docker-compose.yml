@@ -27,8 +27,6 @@ services:
     container_name: kcti-portal-frontend
     ports:
       - "3000:3000"
-    environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8002
     depends_on:
       - kcti-rag-backend
     restart: unless-stopped
