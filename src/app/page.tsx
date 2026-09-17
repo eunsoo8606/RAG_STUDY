@@ -22,7 +22,7 @@ export default function Home() {
   });
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', width: '100%', overflowX: 'hidden' }}>
       {/* 1. 대한민국 공식 전자정부 배너 */}
       <div className="gov-banner">
         <div style={{ maxWidth: '1240px', margin: '0 auto', width: '100%', display: 'flex', alignItems: 'center', gap: '8px' }}>

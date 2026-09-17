@@ -95,6 +95,21 @@ export default function ChatWidget() {
         body: JSON.stringify({ query, user_dept: userDept })
       });
 
+      if (res.status === 429) {
+        const botMsg: Message = {
+          id: 'bot-' + Date.now(),
+          sender: 'bot',
+          text: `⚠️ **AI 서비스 요청 한도(API Quota)가 일시적으로 초과되었습니다.**\n\n현재 구글 Gemini API의 분당/일일 무료 호출 허용량(429 Rate Limit)에 도달하여 일시적으로 신규 AI 브리핑 생성이 제한됩니다.\n\n• **권장 조치**: 약 30초~1분 후 다시 질문해 주시기 바랍니다.\n• **보고서 직접 확인**: 상단 **[연구성과]** 메뉴 또는 **[통합검색]**을 통해 KCTI 발간 연구보고서 원문(PDF)을 바로 열람하실 수 있습니다.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          intentTag: 'API 요청 한도 초과 (429)',
+          similarityScore: 0,
+          referencedReports: [],
+          suggestedQueries: ['30초 후 다시 시도하기']
+        };
+        setMessages((prev) => [...prev, botMsg]);
+        return;
+      }
+
       if (res.ok) {
         const data = await res.json();
         
@@ -235,22 +250,37 @@ export default function ChatWidget() {
             background: '#ffffff',
             borderRadius: '16px',
             maxWidth: '540px',
-            width: '90%',
-            padding: '28px',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.25)'
+            width: '92%',
+            maxHeight: '85vh',
+            display: 'flex',
+            flexDirection: 'column',
+            padding: '24px 20px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
+            zIndex: 10000
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
               <span style={{ fontSize: '12px', fontWeight: 800, color: '#0091ea', background: '#e0f2fe', padding: '3px 8px', borderRadius: '4px' }}>
-                [1] KCTI 연구성과 원문 발췌 (p.{selectedSnippet.page})
+                [1] KCTI 연구성과 원문 발췌 (PDF {selectedSnippet.page}페이지)
               </span>
               <button 
                 onClick={() => setSelectedSnippet(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                aria-label="원문 닫기"
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  cursor: 'pointer', 
+                  color: '#64748b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '32px',
+                  height: '32px'
+                }}
               >
                 <X size={20} />
               </button>
             </div>
-            <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#0f172a', marginBottom: '14px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginBottom: '12px', lineHeight: 1.4 }}>
               {selectedSnippet.title}
             </h3>
             <div style={{
@@ -258,10 +288,12 @@ export default function ChatWidget() {
               border: '1px solid #e2e8f0',
               padding: '16px',
               borderRadius: '10px',
-              fontSize: '14px',
+              fontSize: '13.5px',
               lineHeight: 1.7,
               color: '#334155',
-              marginBottom: '20px'
+              marginBottom: '16px',
+              overflowY: 'auto',
+              maxHeight: '55vh'
             }}>
               "{selectedSnippet.content}"
             </div>
@@ -272,11 +304,12 @@ export default function ChatWidget() {
                   background: '#003366',
                   color: '#ffffff',
                   border: 'none',
-                  padding: '8px 20px',
-                  borderRadius: '6px',
+                  padding: '10px 24px',
+                  borderRadius: '8px',
                   fontSize: '13px',
                   fontWeight: 600,
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  minHeight: '40px'
                 }}
               >
                 닫기
@@ -290,9 +323,9 @@ export default function ChatWidget() {
       <div className="chatbot-launcher">
         {!isOpen && (
           <button className="launcher-btn" onClick={() => setIsOpen(true)}>
-            <Sparkles size={20} />
-            <span>KCTI AI 연구비서</span>
-            <span className="launcher-badge">RAG</span>
+            <Sparkles size={18} style={{ flexShrink: 0 }} />
+            <span>AI 연구비서</span>
+            <span className="launcher-badge" style={{ flexShrink: 0 }}>RAG</span>
           </button>
         )}
       </div>
@@ -301,32 +334,41 @@ export default function ChatWidget() {
       {isOpen && (
         <div className="chatbot-modal">
           {/* 헤더 */}
-          <div style={{
-            background: 'linear-gradient(135deg, #002b55, #004d80)',
-            color: '#ffffff',
-            padding: '16px 20px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderBottom: '1px solid rgba(255,255,255,0.1)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div 
+            className="chatbot-header-bar"
+            style={{
+              background: 'linear-gradient(135deg, #002b55, #004d80)',
+              color: '#ffffff',
+              padding: '16px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              borderBottom: '1px solid rgba(255,255,255,0.1)',
+              gap: '8px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
               <div style={{
                 background: '#0091ea',
                 borderRadius: '8px',
                 padding: '6px',
-                display: 'flex'
+                display: 'flex',
+                flexShrink: 0
               }}>
                 <Sparkles size={18} color="#fff" />
               </div>
-              <div>
-                <h3 style={{ fontSize: '15px', fontWeight: 700, margin: 0 }}>KCTI AI 연구비서</h3>
-                <span style={{ fontSize: '11px', color: '#90caf9' }}>연구성과 DB 의미검색 (RAG) 가동중</span>
+              <div style={{ minWidth: 0 }}>
+                <h3 className="modal-header-title" style={{ fontSize: '15px', fontWeight: 700, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  KCTI AI 연구비서
+                </h3>
+                <span className="modal-header-sub" style={{ fontSize: '11px', color: '#90caf9', whiteSpace: 'nowrap' }}>
+                  연구성과 DB 의미검색 (RAG) 가동중
+                </span>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
               <a 
-                href="http://localhost:8000/admin" 
+                href={getApiBaseUrl() ? `${getApiBaseUrl()}/admin` : '/admin'} 
                 target="_blank" 
                 rel="noreferrer"
                 title="ChromaDB 데이터 및 벡터 검색 실시간 관리자 콘솔 열기"
@@ -334,7 +376,7 @@ export default function ChatWidget() {
                   background: 'rgba(255, 255, 255, 0.15)',
                   border: '1px solid rgba(255, 255, 255, 0.3)',
                   color: '#e0f2fe',
-                  padding: '3px 8px',
+                  padding: '4px 8px',
                   borderRadius: '6px',
                   fontSize: '11px',
                   textDecoration: 'none',
@@ -342,34 +384,51 @@ export default function ChatWidget() {
                   alignItems: 'center',
                   gap: '4px',
                   fontWeight: 600,
+                  whiteSpace: 'nowrap',
                   transition: 'background 0.2s'
                 }}
               >
-                <ExternalLink size={12} /> ChromaDB 관리자
+                <ExternalLink size={12} /> 관리자
               </a>
               <button 
                 onClick={() => setIsOpen(false)}
-                style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                aria-label="대화창 닫기"
+                style={{ 
+                  background: 'rgba(255, 255, 255, 0.1)', 
+                  border: 'none', 
+                  color: '#ffffff', 
+                  cursor: 'pointer', 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  flexShrink: 0
+                }}
               >
-                <X size={20} />
+                <X size={22} />
               </button>
             </div>
           </div>
 
-          {/* SFR-014: 사용자 소속 부서 선택 바 (개인화 추천 연계) */}
+          {/* SFR-014: 사용자 소속 부서 선택 바 (개인화 추천 연계, 모바일 가로 스와이프 지원) */}
           <div style={{
             background: '#f8fafc',
             borderBottom: '1px solid #e2e8f0',
-            padding: '8px 16px',
+            padding: '8px 14px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            fontSize: '12px'
+            gap: '8px',
+            fontSize: '12px',
+            overflowX: 'auto',
+            whiteSpace: 'nowrap'
           }}>
-            <span style={{ color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Building2 size={13} /> 소속부서(SFR-014):
+            <span style={{ color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+              <Building2 size={13} /> 소속부서:
             </span>
-            <div style={{ display: 'flex', gap: '6px' }}>
+            <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', whiteSpace: 'nowrap' }}>
               {(['관광정책실', '문화예술본부', '콘텐츠산업본부', '통계·정보실'] as const).map((dept) => (
                 <button
                   key={dept}
@@ -379,14 +438,16 @@ export default function ChatWidget() {
                   }}
                   style={{
                     background: userDept === dept ? '#003366' : '#ffffff',
-                    color: userDept === dept ? '#ffffff' : '#475569',
+                    color: userDept === dept ? '#ffffff' : '#334155',
                     border: '1px solid',
                     borderColor: userDept === dept ? '#003366' : '#cbd5e1',
                     borderRadius: '14px',
                     padding: '3px 10px',
                     fontSize: '11px',
-                    fontWeight: 700,
+                    fontWeight: 600,
                     cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
                     transition: 'all 0.15s'
                   }}
                 >
@@ -415,23 +476,29 @@ export default function ChatWidget() {
                   alignItems: m.sender === 'user' ? 'flex-end' : 'flex-start'
                 }}
               >
-                {/* 봇 답변 분석 뱃지 (SFR-012, SFR-013) */}
+                {/* 봇 답변 분석 뱃지 (SFR-012, SFR-013) - 유효 출처 보고서가 있거나 429 한도 초과 안내일 때 노출 */}
                 {m.sender === 'bot' && m.intentTag && (
+                  (m.referencedReports && m.referencedReports.length > 0) || m.intentTag.includes('429')
+                ) && (
                   <div style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
                     fontSize: '11px',
-                    color: '#0369a1',
-                    background: '#e0f2fe',
+                    color: m.intentTag.includes('429') ? '#b45309' : '#0369a1',
+                    background: m.intentTag.includes('429') ? '#fef3c7' : '#e0f2fe',
                     padding: '3px 10px',
                     borderRadius: '12px',
                     marginBottom: '6px',
                     fontWeight: 700
                   }}>
-                    <span>🎯 {m.intentTag}</span>
-                    <span>·</span>
-                    <span>유사도 {m.similarityScore}%</span>
+                    <span>{m.intentTag.includes('429') ? '⚠️ ' + m.intentTag : '🎯 ' + m.intentTag}</span>
+                    {!m.intentTag.includes('429') && (
+                      <>
+                        <span>·</span>
+                        <span>유사도 {m.similarityScore}%</span>
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -531,7 +598,7 @@ export default function ChatWidget() {
                                 onClick={() => setSelectedSnippet({
                                   title: rep.title,
                                   content: (rep as any).content || rep.chunks?.[0]?.content || rep.summary,
-                                  page: (rep as any).page_no || rep.chunks?.[0]?.pageNumber || 1
+                                  page: (rep as any).pdf_page || (rep as any).page_no || 1
                                 })}
                                 style={{
                                   background: '#eff6ff',
@@ -547,7 +614,7 @@ export default function ChatWidget() {
                                   gap: '4px'
                                 }}
                               >
-                                <BookOpen size={12} /> 원문발췌 확인 (p.{(rep as any).page_no || rep.chunks?.[0]?.pageNumber || 1})
+                                <BookOpen size={12} /> 원문발췌 확인 (PDF p.{(rep as any).pdf_page || (rep as any).page_no || 1})
                               </button>
                             </div>
                           </div>
@@ -556,8 +623,8 @@ export default function ChatWidget() {
                   </div>
                 )}
 
-                {/* SFR-011: 답변 맥락 맞춤형 동적 추천 질문 가이드 버튼 */}
-                {m.sender === 'bot' && m.suggestedQueries && m.suggestedQueries.length > 0 && (
+                {/* SFR-011: 답변 맥락 맞춤형 동적 추천 질문 가이드 버튼 (유효 출처 보고서가 있을 때만 노출) */}
+                {m.sender === 'bot' && m.referencedReports && m.referencedReports.length > 0 && m.suggestedQueries && m.suggestedQueries.length > 0 && (
                   <div style={{
                     marginTop: '8px',
                     width: '100%',
@@ -618,8 +685,8 @@ export default function ChatWidget() {
                   </div>
                 )}
 
-                {/* SFR-015: 답변 만족도 피드백 버튼 (좋아요/싫어요) */}
-                {m.sender === 'bot' && m.id !== 'msg-welcome' && (
+                {/* SFR-015: 답변 만족도 피드백 버튼 (좋아요/싫어요, 유효 출처 보고서가 있을 때만 노출) */}
+                {m.sender === 'bot' && m.id !== 'msg-welcome' && m.referencedReports && m.referencedReports.length > 0 && (
                   <div style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -870,6 +937,7 @@ export default function ChatWidget() {
 
           {/* 입력창 */}
           <form
+            className="chatbot-input-form"
             onSubmit={(e) => {
               e.preventDefault();
               handleSend();

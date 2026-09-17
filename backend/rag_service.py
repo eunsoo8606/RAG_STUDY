@@ -56,6 +56,15 @@ except Exception as e:
     print(f"[ChromaDB Warning]: Collection not found or not initialized yet: {e}")
     collection = None
 
+class QuotaExceededException(Exception):
+    """[가드레일] Google Gemini API 429 Rate Limit / Quota Exceeded 전용 예외"""
+    pass
+
+def is_quota_error(e: Exception) -> bool:
+    """Gemini API 429 및 일일/분당 할당량 초과(Quota/ResourceExhausted) 판별"""
+    msg = str(e).lower()
+    return "429" in msg or "quota" in msg or "resourceexhausted" in msg or "rate limit" in msg
+
 
 def compute_cosine_similarity(vec_a: List[float], vec_b: List[float]) -> float:
     """두 3072차원 벡터 간의 코사인 유사도 (-1.0 ~ 1.0) 계산"""
@@ -288,6 +297,10 @@ def search_reports_from_vector_db(query: str, user_dept: str = "관광정책실"
                 boost_score = 0.0
                 final_similarity = base_similarity
 
+            actual_pdf_page = metas[i].get("pdf_page") or metas[i].get("page_no") or 1
+            # 본문 맨 앞의 구버전 페이지 접두어([제목] [페이지: p.XX]) 정제
+            clean_content = re.sub(r'^\[[^\]]+\]\s*\[페이지:\s*p\.\d+\]\s*', '', content).strip()
+
             raw_results.append({
                 "report_id": metas[i].get("report_id", ids[i]),
                 "title": title,
@@ -296,8 +309,9 @@ def search_reports_from_vector_db(query: str, user_dept: str = "관광정책실"
                 "publish_date": metas[i].get("publish_date", "2025-12-19"),
                 "summary": summary,
                 "policy_implications": metas[i].get("policy_implications", ""),
-                "page_no": metas[i].get("page_no", 1),
-                "content": content,
+                "page_no": actual_pdf_page,
+                "pdf_page": actual_pdf_page,
+                "content": clean_content,
                 "chunk_id": ids[i],
                 "similarity": final_similarity,
                 "base_similarity": base_similarity,
@@ -308,14 +322,9 @@ def search_reports_from_vector_db(query: str, user_dept: str = "관광정책실"
                 "boost_score": boost_score
             })
 
-        # [품질 가드레일] 질문과의 기본 의미 유사도가 75.0% 이상인 유관 보고서만 엄격히 선별
-        # Why: 2건을 억지로 채우기 위해 질문과 무관한 엉뚱한 보고서를 노출하는 것을 원천 차단
-        #      관련 있는 보고서만 보여주고, 1건만 관련 있으면 정직하게 1건만 반환함
-        valid_results = [r for r in raw_results if r["base_similarity"] >= MIN_RELEVANCE_THRESHOLD]
-
-        # 만약 전체 검색 결과가 모두 75% 미만인 극단적 경우에만 최상위 1건만 최소 근거로 제공
-        if not valid_results and raw_results:
-            valid_results = [raw_results[0]]
+        # [품질 가드레일] 질문과의 기본 의미 유사도가 73.0% 이상인 유관 보고서만 엄격히 선별
+        # Why: 질문과 무관한 질의(예: '이상한 말이다', 일상어)에서 엉뚱한 참고문헌을 억지로 노출하는 것을 원천 차단
+        valid_results = [r for r in raw_results if r["base_similarity"] >= 73.0]
 
         # 가산점이 반영된 최종 유사도 점수(similarity) 기준 내림차순 정렬
         valid_results.sort(key=lambda x: x["similarity"], reverse=True)
@@ -344,38 +353,13 @@ def search_reports_from_vector_db(query: str, user_dept: str = "관광정책실"
         return final_reports
 
     except Exception as e:
-        print(f"[Vector Search Fallback - Error occurred]: {e}")
-        # 하이브리드 안전망: Gemini API 장애/쿼터 초과 시 로컬 ChromaDB 텍스트 매칭으로 자동 복구
-        try:
-            keywords = [w for w in re.split(r'\s+', query) if len(w) >= 2 and w not in ['관련', '보고서', '찾아줘', '알려줘', '대해']]
-            target_kw = keywords[0] if keywords else "보고서"
-            matched_docs = collection.get(
-                where_document={"$contains": target_kw},
-                limit=5,
-                include=["documents", "metadatas"]
-            )
-            if matched_docs and matched_docs["ids"]:
-                fallback_list = []
-                for i in range(len(matched_docs["ids"])):
-                    meta = matched_docs["metadatas"][i]
-                    fallback_list.append({
-                        "report_id": meta.get("report_id", matched_docs["ids"][i]),
-                        "title": meta.get("title", "연구보고서"),
-                        "department": meta.get("department", "문화예술본부"),
-                        "authors": meta.get("authors", "KCTI 연구진"),
-                        "publish_date": meta.get("publish_date", "2025.01"),
-                        "summary": meta.get("summary", ""),
-                        "policy_implications": meta.get("policy_implications", ""),
-                        "page_no": meta.get("page_no", 1),
-                        "content": matched_docs["documents"][i],
-                        "chunk_id": matched_docs["ids"][i],
-                        "similarity": 88.5,
-                        "is_primary": (i == 0),
-                        "is_recommended": False
-                    })
-                return fallback_list[:2]
-        except Exception as fb_err:
-            print(f"[Hybrid Fallback Error]: {fb_err}")
+        if is_quota_error(e):
+            print(f"[429 Quota Exceeded in Vector Search]: {e}")
+            raise QuotaExceededException(str(e))
+
+        print(f"[Vector Search Error]: {e}")
+        # Why: 키워드 하드코딩 및 엉뚱한 보고서를 유발하던 텍스트 Fallback을 완전 제거하고,
+        #      오직 3072차원 벡터 유사도(73.0% 컷오프) 원칙에 따라 정직하게 빈 결과 반환
         return []
 
 
@@ -417,7 +401,7 @@ def generate_rag_answer_with_ai(query: str, primary_report: Dict[str, Any]) -> t
     아래 제공된 [KCTI 연구보고서 원문]의 내용에만 철저히 근거하여, 질문자의 질문에 대해 신뢰할 수 있고 전문적인 톤으로 답변을 작성해 주세요.
 
     [규칙]
-    1. 허위 사실을 지어내지 말고, 오직 아래 보고서 내용에 있는 사실만 기반으로 답변할 것.
+    1. 허위 사실을 지어내지 말고, 오직 아래 보고서 내용에 있는 사실만 기반으로 답변할 것. 만약 질문 내용이 보고서의 연구 주제와 전혀 무관한 경우, 억지로 보고서 내용을 엮어 설명하지 말고 질문과 무관함을 분명히 밝힐 것.
     2. 답변 마지막이나 핵심 문장 끝에 반드시 출처 각주 '[1]'을 표기할 것.
     3. 3~4개의 간결한 불릿 포인트 또는 문단으로 가독성 좋게 정리할 것.
     4. [SFR-011] 답변 완료 후, 질문자가 이어서 질문하면 좋을 [답변 맥락 추천 후속 질문] 3개를 반드시 맨 마지막에 다음 형식으로 작성할 것:
@@ -450,6 +434,9 @@ def generate_rag_answer_with_ai(query: str, primary_report: Dict[str, Any]) -> t
                 else:
                     answer_text = full_text
         except Exception as e:
+            if is_quota_error(e):
+                print(f"[429 Quota Exceeded in Gemini Generate]: {e}")
+                raise QuotaExceededException(str(e))
             print(f"[Gemini Generate Error]: {e}")
 
     # Fallback: AI 호출 실패 시 정형 템플릿 사용
