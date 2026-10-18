@@ -15,6 +15,7 @@ services:
       # 호스트 하드디스크와 컨테이너 내부를 연결하여 데이터 100% 영구 보존
       - ./backend/chroma_db:/app/chroma_db
       - ./backend/feedback.db:/app/feedback.db
+      - ./backend/kisa_audit.db:/app/kisa_audit.db
       - ./backend/dept_vectors.json:/app/dept_vectors.json
       - ./backend/intent_vectors.json:/app/intent_vectors.json
     restart: unless-stopped

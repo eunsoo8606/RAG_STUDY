@@ -49,12 +49,24 @@ export default function KisaSpamPortal() {
   });
   const [laws, setLaws] = useState<LawDoc[]>([]);
 
+  const getApiBaseUrl = () => {
+    if (typeof window !== 'undefined') {
+      if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:8000';
+      }
+      return `${window.location.protocol}//${window.location.hostname}:8002`;
+    }
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  };
+
   // 실시간 KPI 및 법령 목록 조회
   const fetchMetricsAndLaws = async () => {
     try {
+      const base = getApiBaseUrl();
       const [mRes, lRes] = await Promise.all([
-        fetch('http://localhost:8000/api/kisa/metrics'),
-        fetch('http://localhost:8000/api/kisa/laws')
+        fetch(`${base}/api/kisa/metrics`),
+        fetch(`${base}/api/kisa/laws`)
       ]);
       if (mRes.ok) {
         const mData = await mRes.json();
