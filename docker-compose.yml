@@ -1,12 +1,12 @@
 version: '3.8'
 
 services:
-  # 1. KCTI RAG 백엔드 (FastAPI + ChromaDB + 시맨틱 벡터 엔진)
-  kcti-rag-backend:
+  # 1. KISA RAG 백엔드 (FastAPI + ChromaDB + 3072차원 시맨틱 엔진)
+  kisa-spam-backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: kcti-rag-backend
+    container_name: kisa-spam-backend
     ports:
       - "8002:8000"  # 사내 서버 충돌 방지: 8000/8001 점유로 인해 8002 사용
     env_file:
@@ -20,14 +20,14 @@ services:
       - ./backend/intent_vectors.json:/app/intent_vectors.json
     restart: unless-stopped
 
-  # 2. KCTI 포털 프론트엔드 (Next.js 웹 화면)
-  kcti-portal-frontend:
+  # 2. KISA 포털 프론트엔드 (Next.js 웹 화면)
+  kisa-spam-frontend:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: kcti-portal-frontend
+    container_name: kisa-spam-frontend
     ports:
       - "3000:3000"
     depends_on:
-      - kcti-rag-backend
+      - kisa-spam-backend
     restart: unless-stopped
