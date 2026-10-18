@@ -256,11 +256,13 @@ def search_reports_from_vector_db(query: str, user_dept: str = "관광정책실"
             include=["documents", "metadatas", "distances", "embeddings"]
         )
 
-        ids = results["ids"][0]
-        docs = results["documents"][0]
-        metas = results["metadatas"][0]
-        dists = results["distances"][0]
-        embeddings = results["embeddings"][0] if "embeddings" in results and results["embeddings"] else []
+        # ChromaDB는 배치(Batch) 쿼리를 지원하여 반환값이 2차원 리스트 형태를 가짐
+        # 단일 질의(query_embeddings=[query_vector])에 대한 n_results=8개 검색 결과 묶음 리스트를 각각 추출
+        ids = results["ids"][0]          # 8개 청크의 고유 ID 리스트
+        docs = results["documents"][0]    # 8개 청크의 원문 텍스트 본문 리스트
+        metas = results["metadatas"][0]   # 8개 청크의 메타데이터(제목, 발행일, 부서, 저자 등) 리스트
+        dists = results["distances"][0]   # 8개 청크와 질문 벡터 간의 코사인 거리 점수 리스트
+        embeddings = results["embeddings"][0] if "embeddings" in results and results["embeddings"] else []  # 8개 청크의 3072차원 임베딩 벡터 리스트
 
         # 사용자가 선택한 부서의 3072차원 사전 임베딩 프로필 벡터 조회
         dept_profile_vector = DEPT_PROFILE_VECTORS.get(user_dept)
