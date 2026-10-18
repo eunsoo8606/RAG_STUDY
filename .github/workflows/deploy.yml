@@ -24,8 +24,9 @@ jobs:
           echo "🚀 [CI/CD] 최신 코드 배포 시작..."
           cd /home/docker/rag/kcti_rag
           
-          echo "📥 [1/3] Git Pull 최신 커밋 반영"
-          git pull origin main
+          echo "📥 [1/3] Git 최신 코드 강제 동기화 (로컬 DB 충돌 방지)"
+          git fetch origin main
+          git reset --hard origin/main
           
           echo "🐳 [2/3] Docker Compose 무중단 재빌드 및 컨테이너 기동"
           docker compose up -d --build
