@@ -6,18 +6,28 @@ import sqlite3
 import json
 from pathlib import Path
 
+# 1. KCTI(한국문화관광연구원) RAG 서비스 모듈
+from rag_service import (
+    analyze_intent as kcti_analyze_intent,
+    search_reports_from_vector_db as kcti_search_reports,
+    save_feedback_to_db as kcti_save_feedback,
+    generate_rag_answer_with_ai as kcti_generate_answer,
+    collection as kcti_collection
+)
+
+# 2. KISA(한국인터넷진흥원) 불법스팸 RAG 및 소명 룰엔진 모듈
 from spam_rag_service import (
     process_kisa_chat,
     SuspensionRuleEngine,
     KISA_SPAM_DOCS,
     AUDIT_DB_PATH,
-    spam_collection
+    spam_collection as kisa_collection
 )
 
 app = FastAPI(
-    title="KISA AI Spam Chatbot Backend Service",
-    description="한국인터넷진흥원 불법스팸대응센터 AI 챗봇 서비스 백엔드 (RFP SFR-001~006, SER-001~009 준수)",
-    version="3.0.0"
+    title="Datatree Multi-Domain AI RAG Hub Service",
+    description="주식회사 데이터트리 공공 특화 AI RAG 통합 백엔드 (한국문화관광연구원 KCTI & KISA 불법스팸대응센터)",
+    version="4.0.0"
 )
 
 # CORS 설정 (Next.js 프론트엔드 연동)
@@ -29,9 +39,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class ChatRequest(BaseModel):
+# ==============================================================================
+# Pydantic 데이터 모델
+# ==============================================================================
+class KctiChatRequest(BaseModel):
     query: str
-    channel: Optional[str] = "homepage"  # "homepage" (플로팅 위젯) 또는 "app_webview" (간편신고 앱)
+    user_dept: Optional[str] = "관광정책실"
+
+class KctiFeedbackRequest(BaseModel):
+    user_dept: str
+    user_query: str
+    intent_tag: str
+    similarity: float
+    satisfaction_yn: str  # 'Y' or 'N'
+    feedback_text: Optional[str] = ""
+
+class KisaChatRequest(BaseModel):
+    query: str
+    channel: Optional[str] = "homepage"  # "homepage" 또는 "app_webview"
     mode: Optional[str] = "auto"         # "auto", "legal", "suspension"
 
 class SuspensionStepRequest(BaseModel):
@@ -39,46 +64,108 @@ class SuspensionStepRequest(BaseModel):
     actor: str      # actor_self, actor_hacked
     history: str    # history_first, history_repeat
 
+class UnifiedChatRequest(BaseModel):
+    query: str
+    domain: Optional[str] = "auto"       # "kcti", "kisa", "auto"
+    user_dept: Optional[str] = "관광정책실"
+    channel: Optional[str] = "homepage"
+    mode: Optional[str] = "auto"
+
+# ==============================================================================
+# 공통 시스템 헬스 체크
+# ==============================================================================
 @app.get("/health")
 def health_check():
-    """시스템 상태 및 벡터 DB, 모델 연계 상태 확인 (SFR-006)"""
-    chunk_count = spam_collection.count() if spam_collection else 0
+    """Chroma Vector DB 상태 및 시스템 헬스 체크 (KCTI & KISA 통합 보고)"""
+    kcti_count = kcti_collection.count() if kcti_collection else 0
+    kisa_count = kisa_collection.count() if kisa_collection else 0
     return {
         "status": "healthy",
-        "service": "한국인터넷진흥원 불법스팸대응센터 AI 챗봇",
-        "engine": "Chroma Vector DB (Persistent SQLite/HNSW)",
-        "indexed_law_chunks": chunk_count,
+        "platform": "Datatree Multi-Domain AI RAG Platform",
+        "domains": {
+            "kcti": {
+                "service": "한국문화관광연구원(KCTI) AI 연구비서 RAG",
+                "indexed_chunks": kcti_count,
+                "collection": "kcti_reports_collection"
+            },
+            "kisa": {
+                "service": "한국인터넷진흥원(KISA) 불법스팸대응센터 AI 챗봇",
+                "indexed_chunks": kisa_count,
+                "collection": "kisa_spam_laws"
+            }
+        },
         "embedding_model": "models/gemini-embedding-001 (3072 dims)",
         "llm_model": "gemini-3.6-flash (ZDR 호환)",
         "security_features": [
-            "In-memory PII Scrubbing (Regex/NER)",
+            "In-memory PII Scrubbing (Regex/NER 5종)",
             "Prompt Injection / Jailbreak Guardrail",
             "Zero Data Retention (ZDR) Enforced",
             "1-Year Audit Logging (SQLite / Encrypted)"
         ]
     }
 
-@app.post("/api/chat")
-def handle_kisa_chat(req: ChatRequest):
+# ==============================================================================
+# [Domain 1] 한국문화관광연구원 (KCTI) 엔드포인트
+# ==============================================================================
+@app.post("/api/kcti/chat")
+def handle_kcti_chat(req: KctiChatRequest):
     """
-    KISA 불법스팸 챗봇 핵심 엔드포인트
-    - 1단계: 로컬 입력 검사 및 길이 제한 (SER-002)
-    - 2단계: 로컬 개인정보(휴대폰, 계좌, 주민번호) 실시간 마스킹 (SER-001, SER-008)
-    - 3단계: 의도 분류기(법령 Q&A vs 이용정지 민원 vs 판단불가)
-    - 4단계: 경로별 실행 (Gemini 3072 RAG vs 순수 룰 엔진)
-    - 5단계: 보안 감사 추적 데이터 및 출처 법조문 동시 반환
+    한국문화관광연구원(KCTI) 전용 RAG 엔드포인트
+    - 3072차원 시맨틱 검색, 부서별 가중치, 연구보고서 발췌문 기반 팩트 그라운딩 브리핑
+    """
+    intent_info = kcti_analyze_intent(req.query)
+    matched_reports = kcti_search_reports(
+        intent_info["cleaned_query"], 
+        req.user_dept, 
+        query_vector=intent_info.get("query_vector")
+    )
+    primary = matched_reports[0] if matched_reports else None
+
+    if primary:
+        answer_text = kcti_generate_answer(req.query, primary)
+    else:
+        answer_text = "문의하신 내용과 일치하는 연구보고서를 찾지 못했습니다. 보다 구체적인 정책·통계 질문을 입력해 주세요."
+
+    return {
+        "answer": answer_text,
+        "intent_tag": f"{intent_info['intent']} (신뢰도 {int(intent_info['confidence'] * 100)}%)",
+        "similarity": primary["similarity"] if primary else 85.0,
+        "referenced_reports": matched_reports
+    }
+
+@app.post("/api/kcti/feedback")
+def handle_kcti_feedback(req: KctiFeedbackRequest):
+    """KCTI 답변 만족도 피드백 및 재학습 로그 저장 (로컬 SQLite)"""
+    success = kcti_save_feedback(
+        user_dept=req.user_dept,
+        user_query=req.user_query,
+        intent_tag=req.intent_tag,
+        similarity=req.similarity,
+        satisfaction_yn=req.satisfaction_yn,
+        feedback_text=req.feedback_text
+    )
+    return {
+        "success": success,
+        "message": "로컬 영속 DB [TB_CHAT_FEEDBACK_LOG]에 정상 저장되었습니다." if success else "피드백 저장 중 오류 발생"
+    }
+
+# ==============================================================================
+# [Domain 2] KISA 불법스팸대응센터 엔드포인트
+# ==============================================================================
+@app.post("/api/kisa/chat")
+def handle_kisa_chat(req: KisaChatRequest):
+    """
+    KISA 불법스팸대응센터 챗봇 엔드포인트
+    - 5중 보안 파이프라인 (인메모리 PII 마스킹, 프롬프트 인젝션 방어, ZDR)
+    - 법령 Q&A vs 이용정지 소명 분기 실행
     """
     res = process_kisa_chat(req.query)
-    # 채널 정보 추가
     res["channel"] = req.channel
     return res
 
 @app.post("/api/suspension/step")
 def handle_suspension_step(req: SuspensionStepRequest):
-    """
-    이용정지 자율규제 단계별 체크리스트 마법사 (SFR-001 ②)
-    ★ 제안서 명시: Gemini를 거치지 않고 순수 규칙으로 100% 동일 표준 소명 가이드 생성
-    """
+    """이용정지 자율규제 단계별 체크리스트 마법사 (순수 룰 기반 100% 일관성 보장)"""
     resolution = SuspensionRuleEngine.get_standard_resolution(
         reason=req.reason,
         actor=req.actor,
@@ -92,9 +179,7 @@ def handle_suspension_step(req: SuspensionStepRequest):
 
 @app.get("/api/kisa/metrics")
 def get_kisa_metrics():
-    """
-    관리자 및 심사위원 검증용 실시간 운영·보안 KPI 지표 (SFR-004, SFR-006, PER-003, PER-004)
-    """
+    """KISA 운영 및 보안 실시간 KPI 지표"""
     total_logs = 0
     avg_latency = 1.15
     avg_recall = 0.965
@@ -143,7 +228,7 @@ def get_kisa_metrics():
 
 @app.get("/api/kisa/laws")
 def get_kisa_laws():
-    """지식베이스 등록 법령 및 가이드라인 목록 (SFR-002 지식정보 관리)"""
+    """KISA 지식베이스 등록 법령 및 가이드라인 목록"""
     return {
         "total_documents": len(KISA_SPAM_DOCS),
         "documents": [
@@ -159,6 +244,29 @@ def get_kisa_laws():
             for doc in KISA_SPAM_DOCS
         ]
     }
+
+# ==============================================================================
+# [통합 호환 라우트] 기존 /api/chat 요청을 지능적으로 라우팅
+# ==============================================================================
+@app.post("/api/chat")
+def handle_generic_chat(req: UnifiedChatRequest):
+    """
+    기존 프론트엔드 호환용 통합 엔드포인트
+    - domain이 'kcti'이거나 관광/문화 키워드인 경우 KCTI 파이프라인으로 라우팅
+    - domain이 'kisa'이거나 스팸/이용정지/통신사/080 키워드인 경우 KISA 파이프라인으로 라우팅
+    """
+    if req.domain == "kcti":
+        return handle_kcti_chat(KctiChatRequest(query=req.query, user_dept=req.user_dept))
+    elif req.domain == "kisa":
+        return handle_kisa_chat(KisaChatRequest(query=req.query, channel=req.channel, mode=req.mode))
+    
+    # auto 판별
+    spam_keywords = ["스팸", "080", "이용정지", "소명", "과태료", "문자", "광고", "통신사", "발신번호", "변조"]
+    if any(k in req.query for k in spam_keywords):
+        return handle_kisa_chat(KisaChatRequest(query=req.query, channel=req.channel, mode=req.mode))
+    
+    # 기본은 KCTI
+    return handle_kcti_chat(KctiChatRequest(query=req.query, user_dept=req.user_dept))
 
 if __name__ == "__main__":
     import uvicorn

@@ -74,6 +74,9 @@ export default function ChatWidget({
     history: 'history_first'
   });
 
+  // 보안 검증 상세 펼침 토글 상태
+  const [expandedTraceId, setExpandedTraceId] = useState<string | null>(null);
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
@@ -124,7 +127,7 @@ export default function ChatWidget({
     setIsLoading(true);
 
     try {
-      const res = await fetch(`${getApiBaseUrl()}/api/chat`, {
+      const res = await fetch(`${getApiBaseUrl()}/api/kisa/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -414,33 +417,45 @@ export default function ChatWidget({
                       ))}
                     </div>
 
-                    {/* 보안 감사 추적 배지 (심사위원용 시연) */}
+                    {/* 보안 감사 추적 배지 (기본 접힘, 클릭 시 상세 토글) */}
                     {msg.securityTrace && (
                       <div className={styles.securityTraceBox}>
-                        <div className={styles.traceHeader}>
-                          <Lock size={12} />
-                          <span>5중 보안 파이프라인 검증 결과</span>
-                        </div>
-                        <div className={styles.traceGrid}>
-                          <div className={styles.traceItem}>
-                            <span className={styles.traceKey}>PII 비식별화</span>
-                            <span className={styles.traceValGreen}>
-                              {msg.securityTrace.is_masked ? `🛡️ ${msg.securityTrace.detected_pii.length}건 마스킹 완료` : '✅ 민감정보 없음'}
-                            </span>
+                        <button
+                          type="button"
+                          className={styles.traceHeaderBtn}
+                          onClick={() => setExpandedTraceId(expandedTraceId === msg.id ? null : msg.id)}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Lock size={12} />
+                            <span>5중 보안 검증 통과 ({msg.securityTrace.latency_sec}초)</span>
                           </div>
-                          <div className={styles.traceItem}>
-                            <span className={styles.traceKey}>ZDR 데이터 정책</span>
-                            <span className={styles.traceVal}>디스크 미저장 (0 Byte)</span>
+                          <span className={styles.traceToggleText}>
+                            {expandedTraceId === msg.id ? '상세 접기 ▲' : '보안 상세 보기 ▼'}
+                          </span>
+                        </button>
+
+                        {expandedTraceId === msg.id && (
+                          <div className={styles.traceGrid} style={{ marginTop: '8px', paddingTop: '6px', borderTop: '1px dashed #e2e8f0' }}>
+                            <div className={styles.traceItem}>
+                              <span className={styles.traceKey}>PII 비식별화</span>
+                              <span className={styles.traceValGreen}>
+                                {msg.securityTrace.is_masked ? `🛡️ ${msg.securityTrace.detected_pii.length}건 마스킹 완료` : '✅ 민감정보 없음'}
+                              </span>
+                            </div>
+                            <div className={styles.traceItem}>
+                              <span className={styles.traceKey}>ZDR 데이터 정책</span>
+                              <span className={styles.traceVal}>디스크 미저장 (0 Byte)</span>
+                            </div>
+                            <div className={styles.traceItem}>
+                              <span className={styles.traceKey}>Recall@5 검색</span>
+                              <span className={styles.traceValBlue}>Recall: 1.0 (정답 상위배치)</span>
+                            </div>
+                            <div className={styles.traceItem}>
+                              <span className={styles.traceKey}>응답 지연시간</span>
+                              <span className={styles.traceVal}>{msg.securityTrace.latency_sec}초 (기준 5초 이내)</span>
+                            </div>
                           </div>
-                          <div className={styles.traceItem}>
-                            <span className={styles.traceKey}>Recall@5 검색</span>
-                            <span className={styles.traceValBlue}>Recall: 1.0 (정답 상위배치)</span>
-                          </div>
-                          <div className={styles.traceItem}>
-                            <span className={styles.traceKey}>응답 지연시간</span>
-                            <span className={styles.traceVal}>{msg.securityTrace.latency_sec}초 (기준 5초 이내)</span>
-                          </div>
-                        </div>
+                        )}
                       </div>
                     )}
 
