@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X, Database, CheckSquare, Plus, Edit2, Trash2,
-  RefreshCw, CheckCircle2, AlertCircle, Save, Shield
+  RefreshCw, CheckCircle2, AlertCircle, Save, Shield,
+  Cpu, Server, Zap, ArrowRightLeft, Layers, Check
 } from 'lucide-react';
 import styles from './KisaAdminModal.module.css';
 
@@ -27,6 +28,20 @@ interface ChecklistRule {
   is_active: number | boolean;
 }
 
+interface ModelSpec {
+  id: string;
+  name: string;
+  version: string;
+  provider: string;
+  delivery_type: string;
+  context_window: string;
+  languages: string;
+  security_features: string;
+  selection_reason: string;
+  is_current: boolean;
+  status: string;
+}
+
 interface KisaAdminModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -34,11 +49,25 @@ interface KisaAdminModalProps {
 }
 
 export default function KisaAdminModal({ isOpen, onClose, onRefreshParent }: KisaAdminModalProps) {
-  const [activeTab, setActiveTab] = useState<'laws' | 'checklists'>('laws');
+  const [activeTab, setActiveTab] = useState<'laws' | 'checklists' | 'models'>('laws');
   const [laws, setLaws] = useState<LawDoc[]>([]);
   const [rules, setRules] = useState<ChecklistRule[]>([]);
+  const [modelSpecs, setModelSpecs] = useState<ModelSpec[]>([]);
+  const [currentProvider, setCurrentProvider] = useState<string>('gemini');
+  const [benchmarkLoading, setBenchmarkLoading] = useState<string | null>(null);
+  const [benchmarkResults, setBenchmarkResults] = useState<Record<string, any>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
+  const modalBodyRef = useRef<HTMLDivElement>(null);
+
+  const handleTabChange = (tab: 'laws' | 'checklists' | 'models') => {
+    setActiveTab(tab);
+    setShowLawForm(false);
+    setShowRuleForm(false);
+    if (modalBodyRef.current) {
+      modalBodyRef.current.scrollTop = 0;
+    }
+  };
 
   // 법령 폼 상태
   const [showLawForm, setShowLawForm] = useState(false);
@@ -97,10 +126,69 @@ export default function KisaAdminModal({ isOpen, onClose, onRefreshParent }: Kis
     }
   };
 
+  const fetchModelSpecs = async () => {
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/api/kisa/model-specs`);
+      if (res.ok) {
+        const data = await res.json();
+        setModelSpecs(data.models || []);
+        setCurrentProvider(data.current_provider || 'gemini');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleSwitchModel = async (providerId: string) => {
+    try {
+      setIsLoading(true);
+      const res = await fetch(`${getApiBaseUrl()}/api/kisa/model-specs/switch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider_id: providerId })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        showToast(data.message);
+        await fetchModelSpecs();
+        if (onRefreshParent) onRefreshParent();
+      } else {
+        alert('모델 전환 중 오류가 발생했습니다.');
+      }
+    } catch (e) {
+      alert('서버 연결 실패');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRunBenchmark = async (providerId: string) => {
+    try {
+      setBenchmarkLoading(providerId);
+      const res = await fetch(`${getApiBaseUrl()}/api/kisa/model-specs/benchmark`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider_id: providerId })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBenchmarkResults(prev => ({ ...prev, [providerId]: data }));
+        showToast(`${data.model_name} 검증 완료: 응답시간 ${data.latency_sec}초`);
+      } else {
+        alert('벤치마크 테스트 실패');
+      }
+    } catch (e) {
+      alert('서버 연결 실패');
+    } finally {
+      setBenchmarkLoading(null);
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
       fetchLaws();
       fetchRules();
+      fetchModelSpecs();
     }
   }, [isOpen]);
 
@@ -245,8 +333,8 @@ export default function KisaAdminModal({ isOpen, onClose, onRefreshParent }: Kis
         {/* 헤더 */}
         <div className={styles.modalHeader}>
           <div className={styles.headerTitleGroup}>
-            <span className={styles.headerBadge}>SFR-002 과업 규격</span>
-            <h3 className={styles.headerTitle}>KISA 불법스팸 지식정보 & 체크리스트 관리 콘솔</h3>
+            <span className={styles.headerBadge}>SFR-002 / SFR-003 과업 규격</span>
+            <h3 className={styles.headerTitle}>KISA 불법스팸 지식·규칙 & AI 모델 관리 콘솔</h3>
           </div>
           <button className={styles.closeBtn} onClick={onClose}>
             <X size={20} />
@@ -264,7 +352,7 @@ export default function KisaAdminModal({ isOpen, onClose, onRefreshParent }: Kis
         <div className={styles.tabBar}>
           <button
             className={`${styles.tabBtn} ${activeTab === 'laws' ? styles.tabActive : ''}`}
-            onClick={() => { setActiveTab('laws'); setShowLawForm(false); }}
+            onClick={() => handleTabChange('laws')}
           >
             <Database size={16} />
             <span>법령·가이드라인 지식베이스 관리 (RAG 색인 {laws.length}건)</span>
@@ -272,15 +360,23 @@ export default function KisaAdminModal({ isOpen, onClose, onRefreshParent }: Kis
 
           <button
             className={`${styles.tabBtn} ${activeTab === 'checklists' ? styles.tabActive : ''}`}
-            onClick={() => { setActiveTab('checklists'); setShowRuleForm(false); }}
+            onClick={() => handleTabChange('checklists')}
           >
             <CheckSquare size={16} />
             <span>이용정지 체크리스트 규칙 관리 ({rules.length}건)</span>
           </button>
+
+          <button
+            className={`${styles.tabBtn} ${activeTab === 'models' ? styles.tabActive : ''}`}
+            onClick={() => handleTabChange('models')}
+          >
+            <Cpu size={16} />
+            <span>AI 모델 제원 및 전환 적합성 (SFR-003)</span>
+          </button>
         </div>
 
         {/* 바디 영역 */}
-        <div className={styles.modalBody}>
+        <div ref={modalBodyRef} className={styles.modalBody}>
           {activeTab === 'laws' ? (
             <div>
               {/* 툴바 */}
@@ -557,6 +653,141 @@ export default function KisaAdminModal({ isOpen, onClose, onRefreshParent }: Kis
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* 세 번째 탭: AI 모델 제원 및 전환 적합성 (SFR-003) */}
+          {activeTab === 'models' && (
+            <div>
+              {/* 툴바 / 아키텍처 안내 */}
+              <div className={styles.toolbar} style={{ background: '#f8fafc', borderLeft: '4px solid #004b93', padding: '16px 20px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Layers size={18} color="#004b93" />
+                    <strong style={{ fontSize: '14px', color: '#0f172a' }}>
+                      벤더 비종속(Vendor-Agnostic) 어댑터 아키텍처 가동 중
+                    </strong>
+                    <span style={{ fontSize: '11px', background: '#dbeafe', color: '#1e40af', padding: '3px 10px', borderRadius: '9999px', fontWeight: 700 }}>
+                      현재 가동: {currentProvider === 'gemini' ? 'Google Gemini 3.6 Flash' : currentProvider === 'openai_vllm' ? 'OpenAI GPT-4o / vLLM' : 'HyperCLOVA X'}
+                    </span>
+                  </div>
+                  <span className={styles.toolInfo} style={{ fontSize: '12px', lineHeight: 1.6 }}>
+                    특정 외산 LLM 종속(Vendor Lock-in)을 탈피하고, 국가정보자원관리원 온프레미스 폐쇄망(vLLM) 및 국산 공공 LLM(HyperCLOVA X)으로 별도 코드 수정 없이 즉시 전환 가능한 플러그인 어댑터 구조입니다.
+                  </span>
+                </div>
+              </div>
+
+              {/* 모델 비교 카드 그리드 */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px', marginTop: '16px' }}>
+                {modelSpecs.map((m) => {
+                  const isCurrent = m.is_current;
+                  const bench = benchmarkResults[m.id];
+                  const isLoadingBench = benchmarkLoading === m.id;
+
+                  return (
+                    <div
+                      key={m.id}
+                      style={{
+                        background: isCurrent ? '#f0f9ff' : '#ffffff',
+                        border: isCurrent ? '2px solid #0284c7' : '1px solid #e2e8f0',
+                        borderRadius: '14px',
+                        padding: '20px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        gap: '14px',
+                        boxShadow: isCurrent ? '0 4px 16px rgba(2, 132, 199, 0.12)' : '0 2px 6px rgba(0,0,0,0.03)'
+                      }}
+                    >
+                      <div>
+                        {/* 상단 뱃지 행 */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '6px', background: isCurrent ? '#0284c7' : '#e2e8f0', color: isCurrent ? '#ffffff' : '#475569' }}>
+                            {isCurrent ? '현재 가동 모델 (OPERATIONAL)' : '전환 대기 (READY)'}
+                          </span>
+                          <span style={{ fontSize: '11px', color: '#64748b' }}>{m.version}</span>
+                        </div>
+
+                        {/* 모델명 */}
+                        <h4 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', marginBottom: '4px' }}>
+                          {m.name}
+                        </h4>
+                        <p style={{ fontSize: '12px', color: '#0284c7', fontWeight: 600, marginBottom: '12px' }}>
+                          {m.delivery_type}
+                        </p>
+
+                        {/* 제원 스펙 리스트 */}
+                        <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: '#64748b' }}>제공 기관/인프라:</span>
+                            <span style={{ fontWeight: 600, color: '#1e293b' }}>{m.provider}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: '#64748b' }}>컨텍스트 길이:</span>
+                            <span style={{ fontWeight: 600, color: '#1e293b' }}>{m.context_window}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: '#64748b' }}>지원 언어:</span>
+                            <span style={{ fontWeight: 600, color: '#1e293b' }}>{m.languages}</span>
+                          </div>
+                          <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '7px', marginTop: '3px' }}>
+                            <span style={{ color: '#64748b', display: 'block', marginBottom: '2px' }}>보안 및 규정 준수:</span>
+                            <span style={{ color: '#047857', fontWeight: 600, fontSize: '11px' }}>{m.security_features}</span>
+                          </div>
+                        </div>
+
+                        {/* 선정 사유 */}
+                        <div style={{ marginTop: '12px', fontSize: '11px', color: '#475569', background: '#f8fafc', padding: '10px 12px', borderRadius: '8px', lineHeight: 1.6 }}>
+                          <strong style={{ color: '#0f172a' }}>선정 사유: </strong>
+                          {m.selection_reason}
+                        </div>
+
+                        {/* 벤치마크 결과가 있을 때 */}
+                        {bench && (
+                          <div style={{ marginTop: '12px', background: bench.success ? '#ecfdf5' : '#fef2f2', border: `1px solid ${bench.success ? '#a7f3d0' : '#fecaca'}`, borderRadius: '8px', padding: '10px 12px', fontSize: '11px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: bench.success ? '#047857' : '#b91c1c', marginBottom: '4px' }}>
+                              <span>검증: {bench.status_label}</span>
+                              <span>응답속도: {bench.latency_sec}초 (기준 5.0초)</span>
+                            </div>
+                            {bench.test_output && (
+                              <p style={{ margin: 0, color: '#334155', fontStyle: 'italic' }}>
+                                "{bench.test_output}"
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 액션 버튼들 */}
+                      <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
+                        <button
+                          type="button"
+                          className={styles.btnSmall}
+                          onClick={() => handleRunBenchmark(m.id)}
+                          disabled={isLoadingBench}
+                          style={{ flex: 1, padding: '8px 10px' }}
+                        >
+                          <Zap size={13} />
+                          <span>{isLoadingBench ? '검증 중...' : '품질·속도 검증'}</span>
+                        </button>
+
+                        {!isCurrent && (
+                          <button
+                            type="button"
+                            className={styles.addBtn}
+                            onClick={() => handleSwitchModel(m.id)}
+                            disabled={isLoading}
+                            style={{ flex: 1, padding: '8px 10px', background: '#0284c7' }}
+                          >
+                            <ArrowRightLeft size={13} />
+                            <span>이 모델로 전환</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>

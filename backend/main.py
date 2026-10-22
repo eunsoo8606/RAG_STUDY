@@ -30,7 +30,10 @@ from spam_rag_service import (
     get_all_checklist_rules_db,
     add_checklist_rule_db,
     update_checklist_rule_db,
-    delete_checklist_rule_db
+    delete_checklist_rule_db,
+    get_kisa_model_specs,
+    switch_kisa_model,
+    benchmark_kisa_model
 )
 
 app = FastAPI(
@@ -321,6 +324,31 @@ def delete_kisa_checklist_rule(rule_id: str):
     """소명 규칙 삭제 (SFR-002)"""
     res = delete_checklist_rule_db(rule_id)
     return res
+
+# ==============================================================================
+# [SFR-003] AI 모델 제원, 벤더 비종속 전환 및 품질 검증 벤치마크 API
+# ==============================================================================
+class SwitchModelRequest(BaseModel):
+    provider_id: str
+
+class BenchmarkModelRequest(BaseModel):
+    provider_id: str
+
+@app.get("/api/kisa/model-specs")
+def get_model_specs():
+    """AI 모델 제원 및 전환 가능 모델 목록 조회 (SFR-003)"""
+    return get_kisa_model_specs()
+
+@app.post("/api/kisa/model-specs/switch")
+def switch_model(req: SwitchModelRequest):
+    """AI 모델 프로바이더 실시간 전환 (SFR-003)"""
+    return switch_kisa_model(req.provider_id)
+
+@app.post("/api/kisa/model-specs/benchmark")
+def benchmark_model(req: BenchmarkModelRequest):
+    """AI 모델 연결성 및 품질 벤치마크 테스트 (SFR-003)"""
+    return benchmark_kisa_model(req.provider_id)
+
 
 # ==============================================================================
 # [통합 호환 라우트] 기존 /api/chat 요청을 지능적으로 라우팅
