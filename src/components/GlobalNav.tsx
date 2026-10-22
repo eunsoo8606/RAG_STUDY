@@ -67,12 +67,11 @@ export default function GlobalNav({ currentDomain }: GlobalNavProps) {
           </ul>
         </nav>
 
-        {/* 우측 시스템 상태 */}
+        {/* 우측 비즈니스 액션 버튼 */}
         <div className={styles.navRight}>
-          <div className={styles.systemStatus} title="온프레미스 벡터 데이터베이스 및 AI 서비스 정상 가동">
-            <span className={styles.statusDot}></span>
-            <span>시스템 정상 운영 중</span>
-          </div>
+          <Link href="/#contact" className={styles.ctaBtn}>
+            <span>도입 문의 및 제안서 요청</span>
+          </Link>
         </div>
       </div>
     </header>

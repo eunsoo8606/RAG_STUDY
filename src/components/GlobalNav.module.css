@@ -123,24 +123,22 @@
   gap: 12px;
 }
 
-.systemStatus {
+.ctaBtn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
+  gap: 6px;
+  padding: 8px 16px;
   border-radius: 6px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  font-size: 12px;
-  font-weight: 600;
-  color: #334155;
+  background: #003366;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.15s ease;
 }
 
-.statusDot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #10b981;
+.ctaBtn:hover {
+  background: #002244;
 }
 
 @media (max-width: 900px) {
