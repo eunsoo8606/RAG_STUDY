@@ -50,7 +50,7 @@ export default function GlobalNav({ currentDomain }: GlobalNavProps) {
               >
                 <Landmark size={15} />
                 <span>한국문화관광연구원 (KCTI)</span>
-                <span className={`${styles.navBadge} ${styles.navBadgeBlue}`}>연구보고서 RAG</span>
+                <span className={`${styles.navBadge} ${styles.navBadgeBlue}`}>과업 실증 PoC</span>
               </Link>
             </li>
 
@@ -61,7 +61,7 @@ export default function GlobalNav({ currentDomain }: GlobalNavProps) {
               >
                 <ShieldCheck size={15} />
                 <span>불법스팸대응센터 (KISA)</span>
-                <span className={`${styles.navBadge} ${styles.navBadgeGreen}`}>보안 가드레일</span>
+                <span className={`${styles.navBadge} ${styles.navBadgeGreen}`}>보안 규격 PoC</span>
               </Link>
             </li>
           </ul>

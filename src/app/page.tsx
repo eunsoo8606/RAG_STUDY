@@ -3,10 +3,10 @@
 import React from 'react';
 import Link from 'next/link';
 import {
-  Landmark, ShieldCheck, ArrowRight, ArrowDown, Database,
+  Landmark, ShieldCheck, ArrowRight, Database,
   Lock, CheckCircle2, Server, Scale, BookOpen, Layers,
   Cpu, FileSearch, ShieldAlert, FileText, CornerDownLeft,
-  Mail, Phone, Building2
+  XCircle, AlertTriangle, CheckCircle, HelpCircle, Building2
 } from 'lucide-react';
 import GlobalNav from '@/components/GlobalNav';
 import styles from './page.module.css';
@@ -21,46 +21,123 @@ export default function DatatreeHubPage() {
       <section className={styles.heroSection}>
         <div className={styles.heroInner}>
           <div className={styles.heroBadge}>
-            <ShieldCheck size={14} />
-            <span>중앙부처 산하 공공기관 실증 레퍼런스 보유</span>
+            <HelpCircle size={14} />
+            <span>공공기관 생성형 AI 도입의 현실적 한계 해결</span>
           </div>
 
           <h1 className={styles.heroTitle}>
-            감사(Audit) 걱정 없이, 환각 없이 도입하는<br />
-            <span className={styles.heroHighlight}>공공·엔터프라이즈 맞춤형 생성형 AI</span>
+            자체 LLM 구축 예산은 부족하고,<br />
+            <span className={styles.heroHighlight}>외부 LLM은 보안 감사가 두려우십니까?</span>
           </h1>
 
           <p className={styles.heroDesc}>
-            단순한 API 챗봇이 아닙니다. 국가정보원 AI 보안 가이드라인과 공공기관 감사 기준을 충족하며,<br />
-            <strong>DMZ 보안 중계 가드레일</strong>과 <strong>팩트 기반 원문 인용</strong>으로 데이터 유출 위험과 허위 답변을 원천 차단합니다.
+            수억 원대 고가 GPU 인프라 투자 없이도, <strong>DMZ 양방향 보안 중계 가드레일(ZDR & PII 마스킹)</strong>을 통해<br />
+            합리적인 예산 내에서 최신 상용 LLM을 국가정보원 보안 기준에 맞춰 안전하게 도입할 수 있습니다.
           </p>
 
           <div className={styles.heroStatsRow}>
             <div className={styles.statItem}>
+              <span className={styles.statVal}>0원</span>
+              <span className={styles.statLbl}>별도 고가 GPU 서버 구매 비용</span>
+            </div>
+            <div className={styles.statItem}>
               <span className={styles.statVal}>100%</span>
-              <span className={styles.statLbl}>보안 컴플라이언스 준수 (ZDR & PII 마스킹)</span>
+              <span className={styles.statLbl}>국정원 보안가이드라인(SER-001~009) 충족</span>
             </div>
             <div className={styles.statItem}>
-              <span className={styles.statVal}>0건</span>
-              <span className={styles.statLbl}>행정 분쟁 리스크 (규정 기반 룰 엔진)</span>
+              <span className={styles.statVal}>0 Byte</span>
+              <span className={styles.statLbl}>Zero Data Retention (디스크 미저장)</span>
             </div>
             <div className={styles.statItem}>
-              <span className={styles.statVal}>96.5%</span>
-              <span className={styles.statLbl}>공공 문서 검색 정확도 (Recall@5)</span>
-            </div>
-            <div className={styles.statItem}>
-              <span className={styles.statVal}>2대 기관</span>
-              <span className={styles.statLbl}>문화체육관광부 · 과기정통부 산하 실증</span>
+              <span className={styles.statVal}>실제 RFP</span>
+              <span className={styles.statLbl}>공공기관 과업지시서 기반 실증 프로토타입</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 3. 양방향 제로 트러스트 보안 파이프라인 아키텍처 다이어그램 (핵심 보안 신뢰) */}
+      {/* 3. 현실적 딜레마 섹션 (The Public AI Dilemma) */}
+      <section className={styles.dilemmaSection}>
+        <div className={styles.sectionHeader}>
+          <div className={styles.sectionCategory}>The Public AI Dilemma</div>
+          <h2 className={styles.sectionTitle}>공공기관이 직면한 AI 도입의 3가지 현실</h2>
+          <p className={styles.sectionDesc}>
+            많은 공공기관이 생성형 AI 도입을 검토하다가 번번이 예산 한계와 보안 규제 장벽에 가로막힙니다.
+          </p>
+        </div>
+
+        <div className={styles.dilemmaGrid}>
+          {/* 한계 1: 자체 LLM 구축 */}
+          <div className={styles.dilemmaCardLimit}>
+            <span className={styles.dilemmaBadgeRed}>한계 1. 자체 온프레미스 LLM</span>
+            <h3 className={styles.dilemmaTitle}>수억 원대 GPU 인프라 예산 장벽</h3>
+            <ul className={styles.dilemmaPoints}>
+              <li className={styles.dilemmaPointItem}>
+                <XCircle size={16} color="#dc2626" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span>H100/A100 고가 GPU 서버 도입비만 수억~십수억 원 소요</span>
+              </li>
+              <li className={styles.dilemmaPointItem}>
+                <XCircle size={16} color="#dc2626" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span>공공기관 일반 용역 예산(수천만~1억 원대)으로는 도입 불가</span>
+              </li>
+              <li className={styles.dilemmaPointItem}>
+                <XCircle size={16} color="#dc2626" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span>무리한 경량 모델(sLLM) 채택 시 한국어 답변 품질 급락</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* 한계 2: 외부 LLM 단순 연동 */}
+          <div className={styles.dilemmaCardRisk}>
+            <span className={styles.dilemmaBadgeOrange}>한계 2. 상용 외부 LLM 단순 연동</span>
+            <h3 className={styles.dilemmaTitle}>개인정보 유출 및 보안 감사 지적</h3>
+            <ul className={styles.dilemmaPoints}>
+              <li className={styles.dilemmaPointItem}>
+                <AlertTriangle size={16} color="#ea580c" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span>대국민 질의에 포함된 전화번호, 계좌, 주민번호 외부 유출 위험</span>
+              </li>
+              <li className={styles.dilemmaPointItem}>
+                <AlertTriangle size={16} color="#ea580c" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span>클라우드 제공자의 프롬프트 재학습 위험으로 데이터 주권 상실</span>
+              </li>
+              <li className={styles.dilemmaPointItem}>
+                <AlertTriangle size={16} color="#ea580c" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span>국가정보원 보안성 검토 및 감사원 지적으로 사업 전면 중단 리스크</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* 해답: 데이터트리 모델 */}
+          <div className={styles.dilemmaCardSolution}>
+            <span className={styles.dilemmaBadgeGreen}>해답. 데이터트리 DMZ 가드레일</span>
+            <h3 className={styles.dilemmaTitle} style={{ color: '#15803d' }}>저비용 고성능 + 무결점 공공 보안</h3>
+            <ul className={styles.dilemmaPoints}>
+              <li className={styles.dilemmaPointItem}>
+                <CheckCircle size={16} color="#15803d" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span><strong>GPU 서버 구매 0원</strong>: 합리적인 소프트웨어 구축 예산 내 완료</span>
+              </li>
+              <li className={styles.dilemmaPointItem}>
+                <CheckCircle size={16} color="#15803d" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span><strong>인메모리 PII 마스킹</strong>: 민감 개인정보 외부 반출 원천 차단</span>
+              </li>
+              <li className={styles.dilemmaPointItem}>
+                <CheckCircle size={16} color="#15803d" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span><strong>Zero Data Retention</strong>: 서버 디스크 미저장(0 Byte) 및 재학습 방지</span>
+              </li>
+              <li className={styles.dilemmaPointItem}>
+                <CheckCircle size={16} color="#15803d" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span><strong>1년 암호화 감사 로깅</strong>: 국가정보원 AI 보안 가이드라인 100% 충족</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. 양방향 제로 트러스트 보안 파이프라인 아키텍처 다이어그램 */}
       <section className={styles.diagramSection}>
         <div className={styles.diagramInner}>
           <div className={styles.sectionHeader}>
-            <div className={styles.sectionCategory}>Zero-Trust Dual-Way Security</div>
+            <div className={styles.sectionCategory}>The Datatree Architecture</div>
             <h2 className={styles.sectionTitle}>양방향 DMZ 중계 가드레일 아키텍처</h2>
             <p className={styles.sectionDesc}>
               대국민 채널과 외부 LLM 사이에 독립된 DMZ 보안 중계서버를 배치하여,
@@ -117,7 +194,7 @@ export default function DatatreeHubPage() {
                 {/* 3. DMZ 보안 중계서버 (인바운드) */}
                 <div className={`${styles.flowCard} ${styles.flowCardDmz}`}>
                   <div className={styles.flowCardHeader}>
-                    <span className={styles.stepNum}>STEP 03 (핵심)</span>
+                    <span className={styles.stepNum}>STEP 03 (핵심 보안)</span>
                     <Lock size={16} color="#0284c7" />
                   </div>
                   <h4 className={styles.flowCardTitle} style={{ color: '#004b93' }}>DMZ 중계서버 (인바운드 가드레일)</h4>
@@ -180,7 +257,7 @@ export default function DatatreeHubPage() {
                 {/* 2. DMZ 보안 중계서버 (아웃바운드) */}
                 <div className={`${styles.flowCard} ${styles.flowCardDmz}`}>
                   <div className={styles.flowCardHeader}>
-                    <span className={styles.stepNum}>STEP 06 (핵심)</span>
+                    <span className={styles.stepNum}>STEP 06 (감사 대응)</span>
                     <ShieldAlert size={16} color="#059669" />
                   </div>
                   <h4 className={styles.flowCardTitle} style={{ color: '#047857' }}>DMZ 중계서버 (아웃바운드 가드레일)</h4>
@@ -230,65 +307,22 @@ export default function DatatreeHubPage() {
         </div>
       </section>
 
-      {/* 4. 'Why DATATREE' 3대 신뢰 가치 */}
-      <section className={styles.valueSection}>
-        <div className={styles.sectionHeader}>
-          <div className={styles.sectionCategory}>Core Value</div>
-          <h2 className={styles.sectionTitle}>왜 공공기관은 데이터트리를 선택하는가</h2>
-          <p className={styles.sectionDesc}>도입 결정권자의 불안 요소를 사전에 제거하는 3대 검증 기준</p>
-        </div>
-
-        <div className={styles.valueGrid}>
-          <div className={styles.valueCard}>
-            <div className={styles.valueIconBox}>
-              <Lock size={22} />
-            </div>
-            <h3 className={styles.valueTitle}>감사에 완벽 대응하는 보안 체계</h3>
-            <p className={styles.valueDesc}>
-              국가정보원 보안 가이드북(SER-001~009)을 100% 충족합니다. 
-              디스크에 개인정보가 전혀 남지 않는 Zero Data Retention과 
-              인메모리 PII 마스킹, 1년 암호화 감사 로그로 사후 보안 감사 지적을 원천 차단합니다.
-            </p>
-          </div>
-
-          <div className={styles.valueCard}>
-            <div className={styles.valueIconBox}>
-              <Scale size={22} />
-            </div>
-            <h3 className={styles.valueTitle}>환각(거짓말) 없는 팩트 그라운딩</h3>
-            <p className={styles.valueDesc}>
-              AI가 임의로 그럴듯하게 지어내는 환각 현상을 방지합니다. 
-              오직 기관 내부의 승인된 법령과 발간 보고서 원문만을 근거로 추출하며, 
-              모든 답변 문장 뒤에 원문 페이지와 각주([1])를 자동 표기합니다.
-            </p>
-          </div>
-
-          <div className={styles.valueCard}>
-            <div className={styles.valueIconBox}>
-              <ShieldCheck size={22} />
-            </div>
-            <h3 className={styles.valueTitle}>분쟁 없는 하이브리드 아키텍처</h3>
-            <p className={styles.valueDesc}>
-              법적 효력이나 과태료, 이용정지 등 민감한 행정 처리는 확률형 AI에 맡기지 않습니다. 
-              100% 동일한 결과를 산출하는 정형화된 규칙 엔진(Rule Engine)과 결합하여 대국민 민원 분쟁을 예방합니다.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* 5. 공공 도메인 구축 레퍼런스 쇼케이스 */}
+      {/* 5. 실제 RFP 기반 실증 프로토타입 쇼케이스 (정직하고 신뢰도 높은 PoC 쇼케이스) */}
       <section className={styles.showcaseSection}>
         <div className={styles.sectionHeader}>
-          <div className={styles.sectionCategory}>Proven References</div>
-          <h2 className={styles.sectionTitle}>검증된 공공부문 구축 레퍼런스</h2>
-          <p className={styles.sectionDesc}>실제 과업지시서와 제안요청서(RFP) 요구 규격을 100% 충족한 실증 사례를 직접 확인해 보세요.</p>
+          <div className={styles.sectionCategory}>RFP PoC Showcase</div>
+          <h2 className={styles.sectionTitle}>실제 공공기관 제안요청서(RFP) 실증 프로토타입</h2>
+          <p className={styles.sectionDesc}>
+            우리는 과장하지 않습니다. 실제 공공기관의 제안요청서 과업 기준과 보안 규격을 정밀 분석하여,<br />
+            실제 구축 시 발생할 수 있는 모든 기술적·보안적 쟁점을 사전 검증하기 위해 직접 개발한 동작 모델입니다.
+          </p>
         </div>
 
         <div className={styles.showcaseGrid}>
-          {/* 쇼케이스 카드 1: 한국문화관광연구원 (KCTI) */}
+          {/* 쇼케이스 카드 1: 한국문화관광연구원 (KCTI) 실증 모델 */}
           <div className={styles.showcaseCard}>
             <div className={styles.cardHeader}>
-              <span className={styles.clientBadge}>문화체육관광부 산하 정책연구기관</span>
+              <span className={styles.clientBadge}>KCTI 과업지시서(SFR-011~015) 검증 PoC</span>
               <div className={styles.iconBox}>
                 <Landmark size={22} />
               </div>
@@ -296,39 +330,39 @@ export default function DatatreeHubPage() {
 
             <h3 className={styles.cardTitle}>
               한국문화관광연구원 (KCTI)<br />
-              지능형 정책 연구 비서 시스템
+              지능형 정책 연구 비서 실증 모델
             </h3>
 
             <p className={styles.cardDesc}>
-              수천 건의 문화·관광·콘텐츠 정책 보고서와 실시간 통계를 3072차원 고밀도 벡터로 색인하여, 
-              연구원 및 정책 담당자에게 실제 발췌문 각주([1])를 동반한 정확한 팩트 브리핑을 제공합니다.
+              수천 권의 방대한 정책 연구보고서에서 외부 LLM을 활용하되 환각을 방지하고 보안성을 입증하기 위해,
+              819개 실제 연구단락을 3072차원 시맨틱 라우터로 색인하고 원문 각주([1]) 표출을 실증했습니다.
             </p>
 
             <div className={styles.specList}>
               <div className={styles.specRow}>
-                <span className={styles.specKey}>지식 베이스 색인</span>
-                <span className={styles.specVal}>819개 연구 단락 정밀 색인</span>
+                <span className={styles.specKey}>과업 기준 대응</span>
+                <span className={styles.specVal}>SFR-011~015 과업 규격 100% 충족</span>
               </div>
               <div className={styles.specRow}>
                 <span className={styles.specKey}>시맨틱 라우팅</span>
-                <span className={styles.specVal}>4대 연구 부서별 가중치 검색 적용</span>
+                <span className={styles.specVal}>3072차원 고밀도 부서별 가중치 검색</span>
               </div>
               <div className={styles.specRow}>
                 <span className={styles.specKey}>팩트 그라운딩</span>
-                <span className={styles.specVal}>임의 생성 방지 및 원문 출처 자동 인용</span>
+                <span className={styles.specVal}>오직 원문 기반 각주([1]) 출처 표기</span>
               </div>
             </div>
 
             <Link href="/kcti" className={styles.cardActionBtn}>
-              <span>한국문화관광연구원 서비스 체험하기</span>
+              <span>KCTI 실증 프로토타입 체험하기</span>
               <ArrowRight size={16} />
             </Link>
           </div>
 
-          {/* 쇼케이스 카드 2: 한국인터넷진흥원 (KISA) */}
+          {/* 쇼케이스 카드 2: 한국인터넷진흥원 (KISA) 실증 모델 */}
           <div className={styles.showcaseCard}>
             <div className={styles.cardHeader}>
-              <span className={styles.clientBadgeGreen}>과학기술정보통신부 산하 정보보호기관</span>
+              <span className={styles.clientBadgeGreen}>KISA 보안요구사항(SER-001~009) 검증 PoC</span>
               <div className={styles.iconBoxGreen}>
                 <ShieldCheck size={22} />
               </div>
@@ -336,31 +370,31 @@ export default function DatatreeHubPage() {
 
             <h3 className={styles.cardTitle}>
               한국인터넷진흥원 (KISA)<br />
-              불법스팸 대응 및 이용정지 소명 시스템
+              불법스팸 대응 및 소명 마법사 실증 모델
             </h3>
 
             <p className={styles.cardDesc}>
-              「정보통신망법」 최신 법령·가이드라인 기반 질의응답과, 법적 분쟁을 방지하기 위해 
-              인공지능을 거치지 않는 100% 규칙 기반 이용정지 소명 마법사 및 5단계 보안 체계를 구현했습니다.
+              국가정보원 AI 보안 가이드라인 준수를 입증하기 위해, 인메모리 PII 실시간 마스킹과 
+              분쟁 원천 차단을 위한 100% 규칙 기반(시행령 제62조의4) 소명 위저드를 구현한 실증 모델입니다.
             </p>
 
             <div className={styles.specList}>
               <div className={styles.specRow}>
-                <span className={styles.specKey}>개인정보 보호</span>
+                <span className={styles.specKey}>보안 요건 충족</span>
+                <span className={styles.specVal}>SER-001~009 가이드라인 100% 준수</span>
+              </div>
+              <div className={styles.specRow}>
+                <span className={styles.specKey}>개인정보 통제</span>
                 <span className={styles.specVal}>인메모리 PII 실시간 마스킹 (5종)</span>
               </div>
               <div className={styles.specRow}>
-                <span className={styles.specKey}>데이터 보안 정책</span>
-                <span className={styles.specVal}>Zero Data Retention (서버 디스크 0 Byte)</span>
-              </div>
-              <div className={styles.specRow}>
-                <span className={styles.specKey}>소명 일관성</span>
-                <span className={styles.specVal}>시행령 제62조의4 기준 룰 엔진 적용</span>
+                <span className={styles.specKey}>행정 일관성</span>
+                <span className={styles.specVal}>LLM 미경유 100% 룰 기반 표준 소명</span>
               </div>
             </div>
 
             <Link href="/kisa" className={styles.cardActionBtnGreen}>
-              <span>불법스팸대응센터 서비스 체험하기</span>
+              <span>KISA 실증 프로토타입 체험하기</span>
               <ArrowRight size={16} />
             </Link>
           </div>
@@ -407,7 +441,7 @@ export default function DatatreeHubPage() {
           </div>
           <div style={{ textAlign: 'right' }}>
             <span style={{ color: '#004b93', fontWeight: 600, fontSize: '13px' }}>
-              공공 레퍼런스 RAG 아키텍처 실증 완료
+              공공 RFP 규격 실증 검증 완료
             </span>
             <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#94a3b8' }}>
               Copyright © 2026 DATATREE Inc. All Rights Reserved.
