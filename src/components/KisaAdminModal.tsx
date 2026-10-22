@@ -40,6 +40,8 @@ interface ModelSpec {
   selection_reason: string;
   is_current: boolean;
   status: string;
+  api_key_configured?: boolean;
+  api_key_status?: string;
 }
 
 interface KisaAdminModalProps {
@@ -668,7 +670,7 @@ export default function KisaAdminModal({ isOpen, onClose, onRefreshParent }: Kis
                       벤더 비종속(Vendor-Agnostic) 어댑터 아키텍처 가동 중
                     </strong>
                     <span style={{ fontSize: '11px', background: '#dbeafe', color: '#1e40af', padding: '3px 10px', borderRadius: '9999px', fontWeight: 700 }}>
-                      현재 가동: {currentProvider === 'gemini' ? 'Google Gemini 3.6 Flash' : currentProvider === 'openai_vllm' ? 'OpenAI GPT-4o / vLLM' : 'HyperCLOVA X'}
+                      현재 가동: {currentProvider === 'gemini' ? 'Google Gemini 2.5 Flash' : currentProvider === 'openai_vllm' ? 'OpenAI GPT-4o / vLLM' : 'HyperCLOVA X'}
                     </span>
                   </div>
                   <span className={styles.toolInfo} style={{ fontSize: '12px', lineHeight: 1.6 }}>
@@ -701,11 +703,27 @@ export default function KisaAdminModal({ isOpen, onClose, onRefreshParent }: Kis
                     >
                       <div>
                         {/* 상단 뱃지 행 */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                           <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '6px', background: isCurrent ? '#0284c7' : '#e2e8f0', color: isCurrent ? '#ffffff' : '#475569' }}>
                             {isCurrent ? '현재 가동 모델 (OPERATIONAL)' : '전환 대기 (READY)'}
                           </span>
                           <span style={{ fontSize: '11px', color: '#64748b' }}>{m.version}</span>
+                        </div>
+
+                        {/* API 키 상태 뱃지 (실무적 투명성) */}
+                        <div style={{ marginBottom: '10px' }}>
+                          <span style={{
+                            display: 'inline-block',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            background: m.api_key_configured ? '#ecfdf5' : '#fef3c7',
+                            color: m.api_key_configured ? '#065f46' : '#92400e',
+                            border: `1px solid ${m.api_key_configured ? '#a7f3d0' : '#fde68a'}`
+                          }}>
+                            {m.api_key_status || (m.api_key_configured ? '● API Key 연동 완료' : '○ API Key 미등록')}
+                          </span>
                         </div>
 
                         {/* 모델명 */}
