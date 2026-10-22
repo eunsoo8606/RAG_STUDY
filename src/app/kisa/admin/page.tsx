@@ -386,7 +386,7 @@ export default function KisaAdminPortal() {
             </div>
 
             <div className={styles.loginNoticeBox}>
-              <strong>[국가정보원 AI 보안 가이드라인 준수 (SFR-004)]</strong><br />
+              <strong>[국가정보원 AI 보안 가이드라인 준수]</strong><br />
               본 시스템은 개인정보보호법 및 국가정보보호 규정에 따라 <strong>2단계 다중 보안 인증(2FA ID/PW + 모바일 OTP)</strong>을 통과한 인가된 운영관만 열람할 수 있습니다.
             </div>
 
@@ -499,7 +499,7 @@ export default function KisaAdminPortal() {
           </div>
 
           <nav className={styles.sidebarNav}>
-            <div className={styles.navSectionLabel}>모니터링 & 감사 (SFR-004)</div>
+            <div className={styles.navSectionLabel}>모니터링 & 감사</div>
             <button
               type="button"
               className={`${styles.navItem} ${activeTab === 'stats' ? styles.navItemActive : ''}`}
@@ -519,7 +519,7 @@ export default function KisaAdminPortal() {
               <span className={styles.navBadge}>{totalLogsCount}건</span>
             </button>
 
-            <div className={styles.navSectionLabel}>지식베이스 및 규칙 관리 (SFR-002)</div>
+            <div className={styles.navSectionLabel}>지식베이스 및 규칙 관리</div>
             <button
               type="button"
               className={`${styles.navItem} ${activeTab === 'laws' ? styles.navItemActive : ''}`}
@@ -539,7 +539,7 @@ export default function KisaAdminPortal() {
               <span className={styles.navBadge}>{rules.length}건</span>
             </button>
 
-            <div className={styles.navSectionLabel}>AI 엔진 및 벤더 적합성 (SFR-003)</div>
+            <div className={styles.navSectionLabel}>AI 엔진 및 모델 제원</div>
             <button
               type="button"
               className={`${styles.navItem} ${activeTab === 'models' ? styles.navItemActive : ''}`}
@@ -568,11 +568,11 @@ export default function KisaAdminPortal() {
           <header className={styles.topBar}>
             <div className={styles.topBarLeft}>
               <h1 className={styles.pageTitle}>
-                {activeTab === 'stats' && '운영 통계 대시보드 (SFR-004)'}
-                {activeTab === 'logs' && '질의응답 이력 관리 및 암호화 감사 로그 (SFR-004)'}
-                {activeTab === 'laws' && '지식베이스 법령 및 가이드라인 동적 관리 (SFR-002)'}
-                {activeTab === 'checklists' && '이용정지 자율규제 소명 절차 규칙 관리 (SFR-002)'}
-                {activeTab === 'models' && 'AI 모델 제원 관리 및 벤더 비종속 전환 적합성 (SFR-003)'}
+                {activeTab === 'stats' && '운영 통계 대시보드'}
+                {activeTab === 'logs' && '질의응답 이력 관리 및 암호화 감사 로그'}
+                {activeTab === 'laws' && '지식베이스 법령 및 가이드라인 관리'}
+                {activeTab === 'checklists' && '이용정지 자율규제 소명 절차 규칙 관리'}
+                {activeTab === 'models' && 'AI 모델 제원 관리 및 벤더 독립성'}
               </h1>
             </div>
             <div className={styles.topBarRight}>
@@ -599,7 +599,7 @@ export default function KisaAdminPortal() {
 
           <div className={styles.pageBody}>
             {/* ------------------------------------------------------------------
-                탭 1: 운영 통계 대시보드 (SFR-004)
+                탭 1: 운영 통계 대시보드
                 ------------------------------------------------------------------ */}
             {activeTab === 'stats' && stats && (
               <>
@@ -611,7 +611,7 @@ export default function KisaAdminPortal() {
                     <span className={styles.kpiBoxSub}>순 이용자 수 {stats.summary.unique_visitors}명</span>
                   </div>
                   <div className={styles.kpiBox}>
-                    <span className={styles.kpiBoxLabel}>평균 응답 속도 (PER-003)</span>
+                    <span className={styles.kpiBoxLabel}>평균 응답 속도</span>
                     <span className={styles.kpiBoxValue}>{stats.summary.avg_latency_sec}초</span>
                     <span className={styles.kpiBoxSub} style={{ color: '#16a34a' }}>기준 5.0초 대비 100% 충족</span>
                   </div>
@@ -726,7 +726,7 @@ export default function KisaAdminPortal() {
             )}
 
             {/* ------------------------------------------------------------------
-                탭 2: 질의응답 이력 & 암호화 감사 로그 (SFR-004)
+                탭 2: 질의응답 이력 & 암호화 감사 로그
                 ------------------------------------------------------------------ */}
             {activeTab === 'logs' && (
               <div className={styles.card}>
@@ -734,7 +734,7 @@ export default function KisaAdminPortal() {
                   <div>
                     <h3 className={styles.cardTitle}>
                       <FileText size={16} />
-                      <span>질의응답 이력 조회 및 암호화 전문 감사 (SFR-004)</span>
+                      <span>질의응답 이력 조회 및 암호화 전문 감사</span>
                     </h3>
                     <p className={styles.cardDesc}>
                       사용자 질의, 마스킹 처리, 응답시간, 답변 근거 법령 기록 및 AES-256 암호화 전문 관리자 2차 인증 열람
@@ -838,7 +838,7 @@ export default function KisaAdminPortal() {
                                     type="button"
                                     className={styles.btnDecrypt}
                                     style={{ flexShrink: 0 }}
-                                    title="AES-256 원문 복호화 열람 (SFR-004)"
+                                    title="AES-256 원문 복호화 열람"
                                     onClick={() => setDecryptModal({
                                       isOpen: true,
                                       logItem: log,
@@ -913,7 +913,7 @@ export default function KisaAdminPortal() {
             )}
 
             {/* ------------------------------------------------------------------
-                탭 3: 지식베이스 법령 관리 (SFR-002)
+                탭 3: 지식베이스 법령 관리
                 ------------------------------------------------------------------ */}
             {activeTab === 'laws' && (
               <div className={styles.card}>
@@ -921,15 +921,15 @@ export default function KisaAdminPortal() {
                   <div>
                     <h3 className={styles.cardTitle}>
                       <Database size={16} />
-                      <span>지식베이스 법령 및 가이드라인 동적 관리 (SFR-002)</span>
+                      <span>지식베이스 법령 및 가이드라인 관리</span>
                     </h3>
                     <p className={styles.cardDesc}>
-                      정보통신망법, 시행령, 전송 가이드라인 문서 등록·수정 및 3072차원 실시간 임베딩 색인
+                      정보통신망법, 시행령, 전송 가이드라인 문서 등록·수정 및 실시간 검색 색인 관리
                     </p>
                   </div>
                   <span className={styles.securityStatusPill}>
                     <Check size={12} />
-                    <span>실시간 ChromaDB 동기화 활성</span>
+                    <span>실시간 검색 색인 동기화 활성</span>
                   </span>
                 </div>
                 <div className={styles.cardBody}>
@@ -957,7 +957,7 @@ export default function KisaAdminPortal() {
             )}
 
             {/* ------------------------------------------------------------------
-                탭 4: 이용정지 소명 규칙 엔진 (SFR-002)
+                탭 4: 이용정지 소명 규칙 엔진
                 ------------------------------------------------------------------ */}
             {activeTab === 'checklists' && (
               <div className={styles.card}>
@@ -965,7 +965,7 @@ export default function KisaAdminPortal() {
                   <div>
                     <h3 className={styles.cardTitle}>
                       <Sliders size={16} />
-                      <span>이용정지 자율규제 소명 절차 규칙 엔진 (SFR-002)</span>
+                      <span>이용정지 자율규제 소명 규칙 엔진</span>
                     </h3>
                     <p className={styles.cardDesc}>
                       통신사 자율규제 및 시행령 제62조의4에 따른 정지 원인별 표준 소명 단계 규칙
@@ -973,7 +973,7 @@ export default function KisaAdminPortal() {
                   </div>
                   <span className={styles.securityStatusPill}>
                     <Check size={12} />
-                    <span>환각 0% 확정 룰엔진 가동</span>
+                    <span>표준 소명 규칙 엔진 가동</span>
                   </span>
                 </div>
                 <div className={styles.cardBody}>
@@ -1003,7 +1003,7 @@ export default function KisaAdminPortal() {
             )}
 
             {/* ------------------------------------------------------------------
-                탭 5: AI 모델 제원 및 전환 관리 (SFR-003)
+                탭 5: AI 모델 제원 및 전환 관리
                 ------------------------------------------------------------------ */}
             {activeTab === 'models' && (
               <div className={styles.card}>
@@ -1011,7 +1011,7 @@ export default function KisaAdminPortal() {
                   <div>
                     <h3 className={styles.cardTitle}>
                       <Cpu size={16} />
-                      <span>AI 모델 제원 관리 및 벤더 비종속 전환 적합성 (SFR-003)</span>
+                      <span>AI 모델 제원 관리 및 벤더 독립성</span>
                     </h3>
                     <p className={styles.cardDesc}>
                       특정 벤더 종속 탈피(Vendor-agnostic)를 위한 어댑터 패턴 및 한국어 품질 벤치마크
@@ -1098,7 +1098,7 @@ export default function KisaAdminPortal() {
       </div>
 
       {/* ------------------------------------------------------------------------
-          3. 암호화 전문 복호화 모달 (SFR-004 AES-256 2차 PIN 검증)
+          3. 암호화 전문 복호화 모달 (AES-256 2차 PIN 검증)
           ------------------------------------------------------------------------ */}
       {decryptModal.isOpen && decryptModal.logItem && (
         <div className={styles.modalOverlay}>
@@ -1106,7 +1106,7 @@ export default function KisaAdminPortal() {
             <div className={styles.modalHeader}>
               <h2>
                 <Shield size={16} />
-                <span>암호화 입출력 전문 관리자 2차 인증 복호화 (SFR-004)</span>
+                <span>암호화 입출력 전문 관리자 2차 인증 복호화</span>
               </h2>
               <button
                 type="button"

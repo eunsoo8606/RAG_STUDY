@@ -62,7 +62,7 @@ export default function ChatWidget({
   const [isLoading, setIsLoading] = useState(false);
   const [selectedLawModal, setSelectedLawModal] = useState<LawReference | null>(null);
 
-  // 이용정지 체크리스트 마법사 상태 (SFR-001 ②)
+  // 이용정지 체크리스트 마법사 상태
   const [wizardStep, setWizardStep] = useState<number>(1);
   const [wizardData, setWizardData] = useState<{
     reason: string;
@@ -261,7 +261,7 @@ export default function ChatWidget({
                   <span className={styles.headerTag}>공식 상담</span>
                 </h3>
                 <p className={styles.headerSubtitle}>
-                  {isMobileView ? '📱 간편신고 앱 웹뷰 탭' : '🖥️ 불법스팸대응센터 플로팅 위젯'} • 5중 보안 적용
+                  불법스팸 법률 질의응답 및 소명 절차 안내
                 </p>
               </div>
             </div>
@@ -273,7 +273,7 @@ export default function ChatWidget({
             )}
           </div>
 
-          {/* 모드 선택 탭 (SFR-001 ① 법령 RAG vs ② 이용정지 규칙) */}
+          {/* 모드 선택 탭 */}
           <div className={styles.tabBar}>
             <button
               className={`${styles.tabBtn} ${activeTab === 'legal' ? styles.tabActive : ''}`}
@@ -281,15 +281,13 @@ export default function ChatWidget({
             >
               <Scale size={15} />
               <span>스팸 법령·제도 Q&A</span>
-              <span className={styles.tabBadge}>RAG</span>
             </button>
             <button
               className={`${styles.tabBtn} ${activeTab === 'suspension' ? styles.tabActive : ''}`}
               onClick={() => setActiveTab('suspension')}
             >
               <CheckSquare size={15} />
-              <span>이용정지 소명 마법사</span>
-              <span className={styles.tabBadgeGreen}>규칙</span>
+              <span>이용정지 소명 안내</span>
             </button>
           </div>
 
@@ -452,7 +450,7 @@ export default function ChatWidget({
                   <div className={styles.loadingDot} />
                   <div className={styles.loadingDot} />
                   <div className={styles.loadingDot} />
-                  <span className={styles.loadingText}>PII 비식별화 및 3072차원 법령 벡터 검색 중...</span>
+                  <span className={styles.loadingText}>관련 법령 및 규정을 확인하고 있습니다...</span>
                 </div>
               </div>
             )}
@@ -460,7 +458,7 @@ export default function ChatWidget({
             <div ref={messagesEndRef} />
           </div>
 
-          {/* 추천 질문 칩 (법령 Q&A 모드 시) */}
+          {/* 추천 질문 칩 */}
           {activeTab === 'legal' && (
             <div className={styles.presetChipsArea}>
               <div className={styles.presetScroll}>
@@ -470,7 +468,6 @@ export default function ChatWidget({
                     className={styles.presetChip}
                     onClick={() => handleSend(item.query)}
                   >
-                    <Sparkles size={11} className={styles.sparkleIcon} />
                     <span>{item.label}</span>
                   </button>
                 ))}
@@ -507,7 +504,7 @@ export default function ChatWidget({
         </div>
       )}
 
-      {/* 근거 조문 상세 원문 모달 (SFR-001 W1) */}
+      {/* 근거 조문 상세 원문 모달 */}
       {selectedLawModal && (
         <div className={styles.modalOverlay} onClick={() => setSelectedLawModal(null)}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>

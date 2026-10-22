@@ -335,7 +335,7 @@ export default function KisaAdminModal({ isOpen, onClose, onRefreshParent }: Kis
         {/* 헤더 */}
         <div className={styles.modalHeader}>
           <div className={styles.headerTitleGroup}>
-            <span className={styles.headerBadge}>SFR-002 / SFR-003 과업 규격</span>
+            <span className={styles.headerBadge}>관리자 콘솔</span>
             <h3 className={styles.headerTitle}>KISA 불법스팸 지식·규칙 & AI 모델 관리 콘솔</h3>
           </div>
           <button className={styles.closeBtn} onClick={onClose}>
@@ -357,7 +357,7 @@ export default function KisaAdminModal({ isOpen, onClose, onRefreshParent }: Kis
             onClick={() => handleTabChange('laws')}
           >
             <Database size={16} />
-            <span>법령·가이드라인 지식베이스 관리 (RAG 색인 {laws.length}건)</span>
+            <span>법령·가이드라인 지식베이스 관리 (색인 {laws.length}건)</span>
           </button>
 
           <button
@@ -373,7 +373,7 @@ export default function KisaAdminModal({ isOpen, onClose, onRefreshParent }: Kis
             onClick={() => handleTabChange('models')}
           >
             <Cpu size={16} />
-            <span>AI 모델 제원 및 전환 적합성 (SFR-003)</span>
+            <span>AI 모델 제원 및 전환 관리</span>
           </button>
         </div>
 
@@ -384,7 +384,7 @@ export default function KisaAdminModal({ isOpen, onClose, onRefreshParent }: Kis
               {/* 툴바 */}
               <div className={styles.toolbar}>
                 <span className={styles.toolInfo}>
-                  신규 등록 시 <strong>3072차원 고밀도 임베딩</strong>이 실시간 생성되어 별도 배포 없이 챗봇에 즉시 반영됩니다.
+                  신규 등록 시 <strong>실시간 시맨틱 임베딩</strong>이 생성되어 별도 배포 없이 챗봇에 즉시 반영됩니다.
                 </span>
                 <button
                   className={styles.addBtn}
@@ -658,7 +658,7 @@ export default function KisaAdminModal({ isOpen, onClose, onRefreshParent }: Kis
             </div>
           )}
 
-          {/* 세 번째 탭: AI 모델 제원 및 전환 적합성 (SFR-003) */}
+          {/* 세 번째 탭: AI 모델 제원 및 전환 관리 */}
           {activeTab === 'models' && (
             <div>
               {/* 툴바 / 아키텍처 안내 */}

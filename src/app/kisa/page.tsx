@@ -144,10 +144,10 @@ export default function KisaSpamPortal() {
             <Link
               href="/kisa/admin"
               className={styles.adminConsoleBtn}
-              title="KISA 불법스팸대응 지능형 시스템 관리자 포털 (SFR-004)"
+              title="KISA 불법스팸대응 지능형 시스템 관리자 포털"
             >
               <Shield size={14} />
-              <span>내부 관리자 시스템 (SFR-004)</span>
+              <span>내부 관리자 시스템</span>
             </Link>
             <div className={styles.securityLiveBadge}>
               <span className={styles.pulseDot} />
@@ -157,17 +157,17 @@ export default function KisaSpamPortal() {
         </div>
       </header>
 
-      {/* 3. [심사위원용 핵심] 실시간 보안 & RAG 아키텍처 인스펙터 바 */}
+      {/* 3. 실시간 보안 & 품질 검증 모니터링 바 */}
       <section className={styles.inspectorSection}>
         <div className={styles.inspectorInner}>
           <div className={styles.inspectorTopRow}>
             <div className={styles.inspectorTitleGroup}>
               <Activity className={styles.inspectorIcon} size={20} />
-              <h2>실시간 보안 및 RAG 품질 검증 인스펙터</h2>
-              <span className={styles.inspectorTag}>제안요청서 KPI 100% 충족</span>
+              <h2>실시간 보안 및 서비스 품질 검증 모니터링</h2>
+              <span className={styles.inspectorTag}>운영 품질 지표 정상</span>
             </div>
             <p className={styles.inspectorDesc}>
-              * 국정원 AI 보안가이드라인(SER-001) 및 객관적 검색 성능(PER-004 Recall@5) 실시간 모니터링
+              * 국가 인공지능 보안 가이드라인 준수 및 실시간 검색 성능 모니터링
             </p>
           </div>
 
@@ -175,50 +175,50 @@ export default function KisaSpamPortal() {
           <div className={styles.kpiGrid}>
             <div className={styles.kpiCard}>
               <div className={styles.kpiHeader}>
-                <span>응답시간 (PER-003)</span>
-                <span className={styles.kpiPassBadge}>합격 (기준 5초)</span>
+                <span>평균 응답시간</span>
+                <span className={styles.kpiPassBadge}>정상 (기준 5초 이내)</span>
               </div>
               <div className={styles.kpiValueRow}>
                 <span className={styles.kpiValue}>{metrics.avg_latency_sec}s</span>
                 <span className={styles.kpiTarget}>/ 목표 5.0초</span>
               </div>
-              <span className={styles.kpiSubtext}>⚡ Gemini 3.8 Flash 초고속 TTFT</span>
+              <span className={styles.kpiSubtext}>Google Gemini 초고속 응답</span>
             </div>
 
             <div className={styles.kpiCard}>
               <div className={styles.kpiHeader}>
-                <span>검색 재현율 (PER-004)</span>
-                <span className={styles.kpiPassBadge}>초과 달성</span>
+                <span>검색 정확도 (Recall@5)</span>
+                <span className={styles.kpiPassBadge}>목표 달성</span>
               </div>
               <div className={styles.kpiValueRow}>
                 <span className={styles.kpiValue}>Recall {metrics.recall_at_5}</span>
                 <span className={styles.kpiTarget}>/ 목표 0.90</span>
               </div>
-              <span className={styles.kpiSubtext}>🎯 3072차원 고밀도 시맨틱 임베딩</span>
+              <span className={styles.kpiSubtext}>고밀도 시맨틱 법령 검색</span>
             </div>
 
             <div className={styles.kpiCard}>
               <div className={styles.kpiHeader}>
-                <span>개인정보 비식별화 (SER-001)</span>
+                <span>개인정보 비식별화</span>
                 <span className={styles.kpiPassBadge}>100% 로컬 차단</span>
               </div>
               <div className={styles.kpiValueRow}>
                 <span className={styles.kpiValue}>{metrics.pii_masked_queries}건</span>
                 <span className={styles.kpiTarget}>/ {metrics.total_queries_processed}질의</span>
               </div>
-              <span className={styles.kpiSubtext}>🛡️ 외부 API 전송 전 전화번호 마스킹</span>
+              <span className={styles.kpiSubtext}>전송 전 전화번호 자동 마스킹</span>
             </div>
 
             <div className={styles.kpiCard}>
               <div className={styles.kpiHeader}>
-                <span>이용정지 표준일치 (SFR-001)</span>
+                <span>이용정지 소명 일치율</span>
                 <span className={styles.kpiPassBadge}>100% 일치</span>
               </div>
               <div className={styles.kpiValueRow}>
                 <span className={styles.kpiValue}>100%</span>
                 <span className={styles.kpiTarget}>표준 일치율</span>
               </div>
-              <span className={styles.kpiSubtext}>⚖️ 시행령 제62조의4 순수 규칙 엔진</span>
+              <span className={styles.kpiSubtext}>시행령 제62조의4 표준 소명 절차</span>
             </div>
           </div>
 
@@ -226,7 +226,7 @@ export default function KisaSpamPortal() {
           <div className={styles.pipelineBox}>
             <div className={styles.pipelineTitle}>
               <Lock size={14} />
-              <span>제안서 2.2장 5중 보안 파이프라인 작동 현황</span>
+              <span>5중 보안 파이프라인 작동 현황</span>
             </div>
             <div className={styles.pipelineSteps}>
               <div className={styles.stepItem}>
@@ -330,17 +330,17 @@ export default function KisaSpamPortal() {
             </div>
           </div>
 
-          {/* 지식베이스 법령 관리 현황 (SFR-002) */}
+          {/* 지식베이스 법령 관리 현황 */}
           <section className={styles.lawsSection}>
             <div className={styles.lawsHeader}>
               <div className={styles.lawsTitleGroup}>
                 <FileText size={18} color="#004b93" />
-                <h3>지식베이스 등록 법령 및 고시 현황 (3072차원 시맨틱 색인)</h3>
+                <h3>지식베이스 등록 법령 및 고시 현황</h3>
                 <span className={styles.lawsCountBadge}>{laws.length}건 유효</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <span style={{ fontSize: '12px', color: '#64748b' }}>
-                  * 법령 개정 시 별도 개발 작업 없이 즉시 질의응답 반영 (SFR-002)
+                  * 법령 개정 시 별도 개발 작업 없이 즉시 질의응답 반영
                 </span>
                 <button
                   type="button"
@@ -379,7 +379,7 @@ export default function KisaSpamPortal() {
           />
         </main>
       ) : (
-        /* 모바일 간편신고 앱 웹뷰 시연 모드 (SFR-005) */
+        /* 모바일 간편신고 앱 웹뷰 시연 모드 */
         <div className={styles.mobileAppPreviewSection}>
           <div className={styles.mobileFrame}>
             <div className={styles.mobileNotch} />
@@ -392,19 +392,15 @@ export default function KisaSpamPortal() {
             </div>
             <div className={styles.mobileNavTabs}>
               <div className={styles.mobileNavTab}>
-                <span>🚨</span>
                 <span>스팸신고</span>
               </div>
               <div className={`${styles.mobileNavTab} ${styles.mobileNavTabActive}`}>
-                <span>💬</span>
                 <span>AI 상담</span>
               </div>
               <div className={styles.mobileNavTab}>
-                <span>📜</span>
                 <span>신고내역</span>
               </div>
               <div className={styles.mobileNavTab}>
-                <span>⚙️</span>
                 <span>설정</span>
               </div>
             </div>
@@ -427,7 +423,7 @@ export default function KisaSpamPortal() {
         </div>
       </footer>
 
-      {/* 6. 지식정보 및 체크리스트 관리자 콘솔 모달 (SFR-002) */}
+      {/* 6. 지식정보 및 체크리스트 관리자 콘솔 모달 */}
       <KisaAdminModal
         isOpen={isAdminOpen}
         onClose={() => setIsAdminOpen(false)}

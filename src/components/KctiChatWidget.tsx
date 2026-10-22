@@ -369,7 +369,7 @@ export default function ChatWidget() {
             fontSize: '12px'
           }}>
             <span style={{ color: '#64748b', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Building2 size={13} /> 소속부서(SFR-014):
+              <Building2 size={13} /> 소속부서:
             </span>
             <div style={{ display: 'flex', gap: '6px' }}>
               {(['관광정책실', '문화예술본부', '콘텐츠산업본부', '통계·정보실'] as const).map((dept) => (
@@ -494,7 +494,7 @@ export default function ChatWidget() {
                                   gap: '4px'
                                 }}>
                                   {isRecommended ? (
-                                    <>✨ [{rIdx + 1}] 개인화 유관 추천 (SFR-014)</>
+                                    <>[{rIdx + 1}] 부서 맞춤 추천 보고서</>
                                   ) : rIdx === 0 ? (
                                     <>[{rIdx + 1}] 핵심 출처 보고서</>
                                   ) : (

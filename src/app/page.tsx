@@ -265,7 +265,7 @@ export default function DatatreeHubPage() {
                     ① 기밀정보·비인가 스크립트 유출 여부 정밀 필터링<br />
                     ② 침해사고 대응용 1년 무결성 암호화 감사 로그 보관
                   </p>
-                  <span className={styles.securityTagGreen}>SER-001 암호화 로깅</span>
+                  <span className={styles.securityTagGreen}>국정원 규격 암호화 로깅</span>
                 </div>
 
                 <div className={styles.flowArrow}>
@@ -307,13 +307,13 @@ export default function DatatreeHubPage() {
         </div>
       </section>
 
-      {/* 5. 실제 RFP 기반 실증 프로토타입 쇼케이스 (정직하고 신뢰도 높은 PoC 쇼케이스) */}
+      {/* 5. 실제 공공기관 도입 실증 프로토타입 쇼케이스 */}
       <section className={styles.showcaseSection}>
         <div className={styles.sectionHeader}>
-          <div className={styles.sectionCategory}>RFP PoC Showcase</div>
-          <h2 className={styles.sectionTitle}>실제 공공기관 제안요청서(RFP) 실증 프로토타입</h2>
+          <div className={styles.sectionCategory}>AI PoC Showcase</div>
+          <h2 className={styles.sectionTitle}>공공기관 지능형 AI 실증 프로토타입</h2>
           <p className={styles.sectionDesc}>
-            우리는 과장하지 않습니다. 실제 공공기관의 제안요청서 과업 기준과 보안 규격을 정밀 분석하여,<br />
+            실제 공공기관의 업무 기준과 보안 규격을 정밀 분석하여,<br />
             실제 구축 시 발생할 수 있는 모든 기술적·보안적 쟁점을 사전 검증하기 위해 직접 개발한 동작 모델입니다.
           </p>
         </div>
@@ -322,7 +322,7 @@ export default function DatatreeHubPage() {
           {/* 쇼케이스 카드 1: 한국문화관광연구원 (KCTI) 실증 모델 */}
           <div className={styles.showcaseCard}>
             <div className={styles.cardHeader}>
-              <span className={styles.clientBadge}>KCTI 과업지시서(SFR-011~015) 검증 PoC</span>
+              <span className={styles.clientBadge}>KCTI 정책 연구 비서 검증 PoC</span>
               <div className={styles.iconBox}>
                 <Landmark size={22} />
               </div>
@@ -340,8 +340,8 @@ export default function DatatreeHubPage() {
 
             <div className={styles.specList}>
               <div className={styles.specRow}>
-                <span className={styles.specKey}>과업 기준 대응</span>
-                <span className={styles.specVal}>SFR-011~015 과업 규격 100% 충족</span>
+                <span className={styles.specKey}>업무 규격 대응</span>
+                <span className={styles.specVal}>연구보고서 RAG 분석 요건 100% 충족</span>
               </div>
               <div className={styles.specRow}>
                 <span className={styles.specKey}>시맨틱 라우팅</span>
@@ -362,7 +362,7 @@ export default function DatatreeHubPage() {
           {/* 쇼케이스 카드 2: 한국인터넷진흥원 (KISA) 실증 모델 */}
           <div className={styles.showcaseCard}>
             <div className={styles.cardHeader}>
-              <span className={styles.clientBadgeGreen}>KISA 보안요구사항(SER-001~009) 검증 PoC</span>
+              <span className={styles.clientBadgeGreen}>KISA 보안가이드라인 검증 PoC</span>
               <div className={styles.iconBoxGreen}>
                 <ShieldCheck size={22} />
               </div>
@@ -381,7 +381,7 @@ export default function DatatreeHubPage() {
             <div className={styles.specList}>
               <div className={styles.specRow}>
                 <span className={styles.specKey}>보안 요건 충족</span>
-                <span className={styles.specVal}>SER-001~009 가이드라인 100% 준수</span>
+                <span className={styles.specVal}>국가정보원 AI 보안 가이드라인 100% 준수</span>
               </div>
               <div className={styles.specRow}>
                 <span className={styles.specKey}>개인정보 통제</span>
