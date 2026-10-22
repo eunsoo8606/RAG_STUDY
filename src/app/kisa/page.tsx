@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Shield, ShieldCheck, Lock, AlertTriangle, ArrowRight,
   Scale, PhoneCall, Smartphone, Sparkles, CheckCircle2,
@@ -140,15 +141,14 @@ export default function KisaSpamPortal() {
           </div>
 
           <div className={styles.headerRight}>
-            <button
-              type="button"
+            <Link
+              href="/kisa/admin"
               className={styles.adminConsoleBtn}
-              onClick={() => setIsAdminOpen(true)}
-              title="지식정보 및 체크리스트 관리 콘솔 (SFR-002)"
+              title="KISA 불법스팸대응 지능형 시스템 관리자 포털 (SFR-004)"
             >
-              <Settings size={14} />
-              <span>지식·규칙 관리 (SFR-002)</span>
-            </button>
+              <Shield size={14} />
+              <span>내부 관리자 시스템 (SFR-004)</span>
+            </Link>
             <div className={styles.securityLiveBadge}>
               <span className={styles.pulseDot} />
               <span>5중 보안 게이트웨이 가동</span>

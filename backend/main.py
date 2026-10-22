@@ -33,7 +33,11 @@ from spam_rag_service import (
     delete_checklist_rule_db,
     get_kisa_model_specs,
     switch_kisa_model,
-    benchmark_kisa_model
+    benchmark_kisa_model,
+    get_admin_audit_logs,
+    decrypt_admin_audit_log,
+    get_admin_operational_stats,
+    verify_admin_login
 )
 
 app = FastAPI(
@@ -349,10 +353,38 @@ def benchmark_model(req: BenchmarkModelRequest):
     """AI 모델 연결성 및 품질 벤치마크 테스트 (SFR-003)"""
     return benchmark_kisa_model(req.provider_id)
 
+# ==============================================================================
+# [SFR-004] 관리자 접근통제(2FA), 질의응답 이력 감사(AES-256), 운영 통계 대시보드 API
+# ==============================================================================
+class AdminLoginRequest(BaseModel):
+    admin_id: str
+    admin_pw: str
+    otp_code: str
 
-# ==============================================================================
-# [통합 호환 라우트] 기존 /api/chat 요청을 지능적으로 라우팅
-# ==============================================================================
+class DecryptLogRequest(BaseModel):
+    query_id: str
+    admin_pin: str
+
+@app.post("/api/kisa/admin/login")
+def admin_login(req: AdminLoginRequest):
+    """[SFR-004] 관리자 2단계 다중 보안 인증 (2FA OTP)"""
+    return verify_admin_login(req.admin_id, req.admin_pw, req.otp_code)
+
+@app.get("/api/kisa/admin/logs")
+def get_audit_logs(filter_type: str = "ALL", keyword: str = "", limit: int = 50):
+    """[SFR-004] 질의응답 이력 조회 및 검색·필터링 (전체/정상/미답변/보안차단/이용정지)"""
+    return get_admin_audit_logs(filter_type=filter_type, keyword=keyword, limit=limit)
+
+@app.post("/api/kisa/admin/decrypt-log")
+def decrypt_audit_log(req: DecryptLogRequest):
+    """[SFR-004] 암호화된 입출력 전문 관리자 2차 인증(PIN/OTP) 후 AES-256 복호화 열람"""
+    return decrypt_admin_audit_log(req.query_id, req.admin_pin)
+
+@app.get("/api/kisa/admin/stats")
+def get_operational_stats(period: str = "7d"):
+    """[SFR-004] 운영 통계: 질의 건수, 이용자 수, 질의 유형, 일별 통계, 응답 현황"""
+    return get_admin_operational_stats(period=period)
+
 @app.post("/api/chat")
 def handle_generic_chat(req: UnifiedChatRequest):
     """
