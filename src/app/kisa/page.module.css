@@ -139,6 +139,29 @@
   gap: 12px;
 }
 
+.adminConsoleBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #0f172a;
+  color: #ffffff;
+  border: 1px solid #334155;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: -0.01em;
+}
+
+.adminConsoleBtn:hover {
+  background: #004b93;
+  border-color: #004b93;
+  box-shadow: 0 4px 12px rgba(0, 75, 147, 0.25);
+  transform: translateY(-1px);
+}
+
 .securityLiveBadge {
   display: flex;
   align-items: center;
@@ -696,6 +719,106 @@
 .mobileNavTabActive {
   color: #004b93;
   font-weight: 700;
+}
+
+/* 지식베이스 법령 관리 섹션 (SFR-002) */
+.lawsSection {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+}
+
+.lawsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.lawsTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lawsTitleGroup h3 {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.lawsCountBadge {
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9999px;
+}
+
+.lawsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.lawItemCard {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+}
+
+.lawItemCard:hover {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+}
+
+.lawCategory {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 700;
+  color: #004b93;
+  background: #e6f0fa;
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.lawTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.45;
+  margin-bottom: 12px;
+}
+
+.lawFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: #64748b;
+  border-top: 1px solid #edf2f7;
+  padding-top: 10px;
+}
+
+.lawStatus {
+  color: #059669;
+  font-weight: 600;
 }
 
 /* 하단 푸터 */

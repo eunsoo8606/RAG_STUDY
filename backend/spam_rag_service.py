@@ -514,10 +514,11 @@ def generate_kisa_rag_response(
     system_prompt = f"""당신은 한국인터넷진흥원(KISA) 불법스팸대응센터의 AI 법률상담 전문 어시스턴트입니다.
 반드시 아래 제공된 [공식 법령 및 가이드라인] 내용만을 바탕으로 답변해야 하며, 없는 사실을 지어내거나 추측해서는 절대 안 됩니다.
 
-[답변 작성 3대 원칙]:
+[답변 작성 4대 원칙]:
 1. 정확한 법조문 근거 명시: 답변 중 인용한 내용 뒤에 반드시 출처 각주(예: [1], [2])와 조문명(예: 정보통신망법 제50조)을 표기할 것.
 2. 과태료/벌칙 규정 명확화: 질문에 위반 시 불이익이나 처벌 문의가 있다면 법정 과태료 부과 기준(1차 750만원, 최대 3천만원 등)을 명시할 것.
 3. 간결성 및 5초 응답 보장: 군더더기 없이 핵심만 2~3개 단락(300자 내외)으로 신속하게 요약 작성할 것.
+4. 순수 한국어 작성 원칙: 영문 표현이나 영어 제목(예: Nighttime Rule 등)을 일절 사용하지 말고, 100% 정중하고 자연스러운 한국어 공공 행정 문체로 작성할 것.
 
 [공식 법령 및 가이드라인]:
 {context_str}
@@ -691,3 +692,301 @@ def process_kisa_chat(raw_query: str) -> Dict[str, Any]:
             "referenced_laws": [],
             "recall_at_5": 0.0
         }
+
+# ==============================================================================
+# [SFR-002] 지식정보(법령/안내서) 및 체크리스트 동적 CRUD 관리자 엔진
+# ==============================================================================
+def init_kisa_sqlite_tables():
+    """SQLite에 지식정보 문서 및 체크리스트 규칙 테이블 생성 및 시드 적재"""
+    conn = sqlite3.connect(AUDIT_DB_PATH)
+    cur = conn.cursor()
+
+    # 1. 지식정보 문서 테이블
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS tb_kisa_knowledge_docs (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            source TEXT NOT NULL,
+            article TEXT NOT NULL,
+            revision_date TEXT NOT NULL,
+            category TEXT NOT NULL,
+            content TEXT NOT NULL,
+            is_active INTEGER DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # 시드 데이터 적재
+    cur.execute("SELECT COUNT(*) FROM tb_kisa_knowledge_docs")
+    if cur.fetchone()[0] == 0:
+        for doc in KISA_SPAM_DOCS:
+            cur.execute("""
+                INSERT INTO tb_kisa_knowledge_docs (id, title, source, article, revision_date, category, content, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+            """, (doc["id"], doc["title"], doc["source"], doc["article"], doc["revision_date"], doc["category"], doc["content"]))
+
+    # 2. 체크리스트 소명 규칙 테이블
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS tb_kisa_checklist_rules (
+            id TEXT PRIMARY KEY,
+            reason_id TEXT NOT NULL,
+            actor_id TEXT NOT NULL,
+            history_id TEXT NOT NULL,
+            category TEXT NOT NULL,
+            law_reference TEXT NOT NULL,
+            summary TEXT NOT NULL,
+            action_steps TEXT NOT NULL,
+            is_active INTEGER DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    cur.execute("SELECT COUNT(*) FROM tb_kisa_checklist_rules")
+    if cur.fetchone()[0] == 0:
+        seed_rules = [
+            (
+                "rule_hacked_default",
+                "ANY", "actor_hacked", "ANY",
+                "번호도용 및 해킹 피해 구제 소명 가이드",
+                "정보통신망법 시행령 제62조의4 제3항 (번호도용 구제)",
+                "타인에 의한 번호 도용 또는 악성앱 감염 피해로 확인될 경우, 통신사 즉시 이의신청을 통해 정지 해제가 가능합니다.",
+                json.dumps([
+                    "1. 이용 중인 이동통신사(SKT, KT, LGU+, 알뜰폰) 고객센터에 '번호도용 이의신청' 접수",
+                    "2. 단말기 악성앱 검사 및 한국인터넷진흥원(KISA) 보호나라(118) 원격 보안점검 신청",
+                    "3. 소명 서류 제출: 신분증 사본 + 번호도용 소명서(통신사 서식) + 통신서비스 가입증명원",
+                    "4. 통신사 심사 후 평균 1~3 영업일 내 이용정지 해제 및 번호도용차단서비스 무료 가입"
+                ], ensure_ascii=False)
+            ),
+            (
+                "rule_self_first",
+                "ANY", "actor_self", "history_first",
+                "불법스팸 최초 적발(1차 위반) 자율규제 소명 절차",
+                "정보통신망법 제50조 및 시행령 별표 6의2 (자율규제 조치 기준)",
+                "수신자의 사전 동의 없는 광고성 정보 발송으로 확인되어 **30일간 이용정지** 처분 대상입니다.",
+                json.dumps([
+                    "1. 처분 기준: 30일간 이용정지 및 망법 제76조에 따른 과태료(최대 3천만원)",
+                    "2. 광고성 정보 전송 시 사전 수신동의 내역(동의서, 웹/앱 가입 기록) 증빙 확보",
+                    "3. 수신동의 증빙이 있는 경우 7일 이내 통신사 자율규제 심의위원회에 소명자료 제출",
+                    "4. 소명 인정 시 정지 조치 철회, 미인정 시 정지 기간 만료 후 재발방지 서약서 제출"
+                ], ensure_ascii=False)
+            ),
+            (
+                "rule_self_repeat",
+                "ANY", "actor_self", "history_repeat",
+                "불법스팸 반복 적발(2회 이상 위반) 가중 처분 안내",
+                "정보통신망법 제50조 및 시행령 별표 6의2 (반복 위반 가중처분)",
+                "과거 1년 이내 동일 위반 사실이 확인되어 시행령 별표 6의2 가중 처분 대상입니다. **최대 3개월 정지 및 회선 직권해지**가 검토됩니다.",
+                json.dumps([
+                    "1. 처분 기준: 최대 3개월 이용정지 및 통신서비스 직권 해지 검토",
+                    "2. 광고 전송 사전 수신동의 내역 및 발신 시스템 정밀 감사 보고서 제출 필요",
+                    "3. 통신사 자율규제 위원회의 엄격한 심의 절차를 거치며 구제 가능성 제한적",
+                    "4. 필요 서류: 통신사 공식 소명서, 사전 수신동의 원본 로그, 대표자 신분증 사본"
+                ], ensure_ascii=False)
+            )
+        ]
+        for r in seed_rules:
+            cur.execute("""
+                INSERT INTO tb_kisa_checklist_rules 
+                (id, reason_id, actor_id, history_id, category, law_reference, summary, action_steps, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+            """, r)
+
+    conn.commit()
+    conn.close()
+
+# 지식정보(법령/가이드라인) CRUD 함수군
+def get_all_kisa_laws_db(include_inactive: bool = True) -> List[Dict[str, Any]]:
+    """지식베이스 등록 법령 전체 조회"""
+    conn = sqlite3.connect(AUDIT_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    if include_inactive:
+        cur.execute("SELECT * FROM tb_kisa_knowledge_docs ORDER BY revision_date DESC, id ASC")
+    else:
+        cur.execute("SELECT * FROM tb_kisa_knowledge_docs WHERE is_active = 1 ORDER BY revision_date DESC, id ASC")
+    rows = [dict(r) for r in cur.fetchall()]
+    conn.close()
+    return rows
+
+def add_kisa_law_doc(data: Dict[str, Any]) -> Dict[str, Any]:
+    """신규 법령 등록 -> 3072차원 실시간 임베딩 -> ChromaDB 즉시 색인 & SQLite 영속 저장 (SFR-002)"""
+    doc_id = data.get("id") or f"doc_{uuid.uuid4().hex[:8]}"
+    full_text = f"[{data['title']}]\n출처: {data['source']} ({data.get('article', '')})\n시행일: {data.get('revision_date', '')}\n\n{data['content']}"
+
+    # 1. 3072차원 Gemini 고밀도 임베딩 실시간 생성
+    try:
+        emb_res = genai.embed_content(model=EMBED_MODEL, content=full_text)
+        vector = emb_res["embedding"]
+    except Exception as e:
+        print(f"[Add Law Embedding Error]: {e}")
+        vector = [0.0] * 3072
+
+    # 2. ChromaDB 즉시 적재 (개발자 배포 없이 실시간 RAG 질의응답에 반영)
+    spam_collection.add(
+        ids=[doc_id],
+        documents=[full_text],
+        metadatas=[{
+            "title": data["title"],
+            "source": data["source"],
+            "article": data.get("article", ""),
+            "revision_date": data.get("revision_date", ""),
+            "category": data.get("category", "법령")
+        }],
+        embeddings=[vector]
+    )
+
+    # 3. SQLite 영속 저장
+    conn = sqlite3.connect(AUDIT_DB_PATH)
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT OR REPLACE INTO tb_kisa_knowledge_docs 
+        (id, title, source, article, revision_date, category, content, is_active, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    """, (
+        doc_id, data["title"], data["source"], data.get("article", ""),
+        data.get("revision_date", ""), data.get("category", "법령"),
+        data["content"], 1 if data.get("is_active", True) else 0
+    ))
+    conn.commit()
+    conn.close()
+    return {"id": doc_id, "status": "SUCCESS", "message": "새 법령 지식이 3072차원 벡터로 실시간 색인되었습니다."}
+
+def update_kisa_law_doc(doc_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    """법령 내용 수정 -> 3072차원 벡터 갱신 -> ChromaDB update & SQLite update"""
+    full_text = f"[{data['title']}]\n출처: {data['source']} ({data.get('article', '')})\n시행일: {data.get('revision_date', '')}\n\n{data['content']}"
+    try:
+        emb_res = genai.embed_content(model=EMBED_MODEL, content=full_text)
+        vector = emb_res["embedding"]
+    except Exception as e:
+        vector = [0.0] * 3072
+
+    spam_collection.update(
+        ids=[doc_id],
+        documents=[full_text],
+        metadatas=[{
+            "title": data["title"],
+            "source": data["source"],
+            "article": data.get("article", ""),
+            "revision_date": data.get("revision_date", ""),
+            "category": data.get("category", "법령")
+        }],
+        embeddings=[vector]
+    )
+
+    conn = sqlite3.connect(AUDIT_DB_PATH)
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE tb_kisa_knowledge_docs
+        SET title = ?, source = ?, article = ?, revision_date = ?, category = ?, content = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (data["title"], data["source"], data.get("article", ""), data.get("revision_date", ""), data.get("category", "법령"), data["content"], doc_id))
+    conn.commit()
+    conn.close()
+    return {"id": doc_id, "status": "SUCCESS", "message": "법령 지식 및 3072차원 벡터가 갱신되었습니다."}
+
+def delete_kisa_law_doc(doc_id: str) -> Dict[str, Any]:
+    """법령 삭제 -> ChromaDB에서 제거 & SQLite 삭제"""
+    try:
+        spam_collection.delete(ids=[doc_id])
+    except Exception as e:
+        print(f"[Chroma Delete Warning]: {e}")
+
+    conn = sqlite3.connect(AUDIT_DB_PATH)
+    cur = conn.cursor()
+    cur.execute("DELETE FROM tb_kisa_knowledge_docs WHERE id = ?", (doc_id,))
+    conn.commit()
+    conn.close()
+    return {"id": doc_id, "status": "SUCCESS", "message": "지식베이스 및 벡터 인덱스에서 안전하게 삭제되었습니다."}
+
+def toggle_kisa_law_doc(doc_id: str) -> Dict[str, Any]:
+    """적용 여부 토글 (ON/OFF)"""
+    conn = sqlite3.connect(AUDIT_DB_PATH)
+    cur = conn.cursor()
+    cur.execute("SELECT is_active, title, source, article, revision_date, category, content FROM tb_kisa_knowledge_docs WHERE id = ?", (doc_id,))
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        return {"status": "ERROR", "message": "문서를 찾을 수 없습니다."}
+
+    new_active = 0 if row[0] == 1 else 1
+    cur.execute("UPDATE tb_kisa_knowledge_docs SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", (new_active, doc_id))
+    conn.commit()
+    conn.close()
+
+    if new_active == 0:
+        try:
+            spam_collection.delete(ids=[doc_id])
+        except Exception:
+            pass
+    else:
+        add_kisa_law_doc({
+            "id": doc_id, "title": row[1], "source": row[2], "article": row[3],
+            "revision_date": row[4], "category": row[5], "content": row[6], "is_active": True
+        })
+
+    return {"id": doc_id, "is_active": new_active, "status": "SUCCESS"}
+
+# 체크리스트 규칙 CRUD 함수군
+def get_all_checklist_rules_db() -> List[Dict[str, Any]]:
+    """체크리스트 규칙 전체 조회"""
+    conn = sqlite3.connect(AUDIT_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM tb_kisa_checklist_rules ORDER BY id ASC")
+    rows = []
+    for r in cur.fetchall():
+        d = dict(r)
+        try:
+            d["action_steps"] = json.loads(d["action_steps"])
+        except Exception:
+            pass
+        rows.append(d)
+    conn.close()
+    return rows
+
+def add_checklist_rule_db(data: Dict[str, Any]) -> Dict[str, Any]:
+    """체크리스트 규칙 등록"""
+    rule_id = data.get("id") or f"rule_{uuid.uuid4().hex[:8]}"
+    steps_json = json.dumps(data.get("action_steps", []), ensure_ascii=False) if isinstance(data.get("action_steps"), list) else data.get("action_steps", "[]")
+    conn = sqlite3.connect(AUDIT_DB_PATH)
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT OR REPLACE INTO tb_kisa_checklist_rules
+        (id, reason_id, actor_id, history_id, category, law_reference, summary, action_steps, is_active)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+    """, (
+        rule_id, data.get("reason_id", "ANY"), data.get("actor_id", "ANY"),
+        data.get("history_id", "ANY"), data["category"], data.get("law_reference", "시행령 제62조의4"),
+        data["summary"], steps_json
+    ))
+    conn.commit()
+    conn.close()
+    return {"id": rule_id, "status": "SUCCESS", "message": "새 소명 규칙이 등록되었습니다."}
+
+def update_checklist_rule_db(rule_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    """체크리스트 규칙 수정"""
+    steps_json = json.dumps(data.get("action_steps", []), ensure_ascii=False) if isinstance(data.get("action_steps"), list) else data.get("action_steps", "[]")
+    conn = sqlite3.connect(AUDIT_DB_PATH)
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE tb_kisa_checklist_rules
+        SET category = ?, law_reference = ?, summary = ?, action_steps = ?
+        WHERE id = ?
+    """, (data["category"], data.get("law_reference", ""), data["summary"], steps_json, rule_id))
+    conn.commit()
+    conn.close()
+    return {"id": rule_id, "status": "SUCCESS", "message": "소명 규칙이 갱신되었습니다."}
+
+def delete_checklist_rule_db(rule_id: str) -> Dict[str, Any]:
+    """체크리스트 규칙 삭제"""
+    conn = sqlite3.connect(AUDIT_DB_PATH)
+    cur = conn.cursor()
+    cur.execute("DELETE FROM tb_kisa_checklist_rules WHERE id = ?", (rule_id,))
+    conn.commit()
+    conn.close()
+    return {"id": rule_id, "status": "SUCCESS", "message": "소명 규칙이 삭제되었습니다."}
+
+# 초기 테이블 생성 호출
+init_kisa_sqlite_tables()
+

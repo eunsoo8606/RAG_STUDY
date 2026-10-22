@@ -21,7 +21,16 @@ from spam_rag_service import (
     SuspensionRuleEngine,
     KISA_SPAM_DOCS,
     AUDIT_DB_PATH,
-    spam_collection as kisa_collection
+    spam_collection as kisa_collection,
+    get_all_kisa_laws_db,
+    add_kisa_law_doc,
+    update_kisa_law_doc,
+    delete_kisa_law_doc,
+    toggle_kisa_law_doc,
+    get_all_checklist_rules_db,
+    add_checklist_rule_db,
+    update_checklist_rule_db,
+    delete_checklist_rule_db
 )
 
 app = FastAPI(
@@ -70,6 +79,27 @@ class UnifiedChatRequest(BaseModel):
     user_dept: Optional[str] = "관광정책실"
     channel: Optional[str] = "homepage"
     mode: Optional[str] = "auto"
+
+# [SFR-002] 지식정보 및 체크리스트 관리 모델
+class LawDocRequest(BaseModel):
+    id: Optional[str] = None
+    title: str
+    source: str
+    article: str
+    revision_date: str
+    category: str
+    content: str
+    is_active: Optional[bool] = True
+
+class ChecklistRuleRequest(BaseModel):
+    id: Optional[str] = None
+    reason_id: Optional[str] = "ANY"
+    actor_id: Optional[str] = "ANY"
+    history_id: Optional[str] = "ANY"
+    category: str
+    law_reference: Optional[str] = "시행령 제62조의4"
+    summary: str
+    action_steps: List[str]
 
 # ==============================================================================
 # 공통 시스템 헬스 체크
@@ -226,24 +256,71 @@ def get_kisa_metrics():
         }
     }
 
+# ==============================================================================
+# [SFR-002] 지식정보(법령/안내서) 동적 CRUD API
+# ==============================================================================
 @app.get("/api/kisa/laws")
-def get_kisa_laws():
-    """KISA 지식베이스 등록 법령 및 가이드라인 목록"""
+def get_kisa_laws(include_inactive: bool = True):
+    """지식베이스 등록 법령 및 가이드라인 목록 조회 (SFR-002)"""
+    docs = get_all_kisa_laws_db(include_inactive=include_inactive)
     return {
-        "total_documents": len(KISA_SPAM_DOCS),
-        "documents": [
-            {
-                "id": doc["id"],
-                "title": doc["title"],
-                "source": doc["source"],
-                "article": doc["article"],
-                "revision_date": doc["revision_date"],
-                "category": doc["category"],
-                "status": "운영 반영 (최신 유효)"
-            }
-            for doc in KISA_SPAM_DOCS
-        ]
+        "total_documents": len(docs),
+        "documents": docs
     }
+
+@app.post("/api/kisa/laws")
+def create_kisa_law(req: LawDocRequest):
+    """신규 법령 등록 -> 3072차원 실시간 임베딩 -> ChromaDB 즉시 색인 & SQLite 영속 저장 (SFR-002)"""
+    res = add_kisa_law_doc(req.dict())
+    return res
+
+@app.put("/api/kisa/laws/{doc_id}")
+def update_kisa_law(doc_id: str, req: LawDocRequest):
+    """법령 내용 수정 -> 3072차원 벡터 갱신 -> ChromaDB update & SQLite update (SFR-002)"""
+    res = update_kisa_law_doc(doc_id, req.dict())
+    return res
+
+@app.delete("/api/kisa/laws/{doc_id}")
+def delete_kisa_law(doc_id: str):
+    """법령 삭제 -> ChromaDB에서 제거 & SQLite 삭제 (SFR-002)"""
+    res = delete_kisa_law_doc(doc_id)
+    return res
+
+@app.patch("/api/kisa/laws/{doc_id}/toggle")
+def toggle_kisa_law(doc_id: str):
+    """법령 적용 여부 토글 (ACTIVE / INACTIVE) (SFR-002)"""
+    res = toggle_kisa_law_doc(doc_id)
+    return res
+
+# ==============================================================================
+# [SFR-002] 자율규제 이용정지 체크리스트 규칙 동적 CRUD API
+# ==============================================================================
+@app.get("/api/kisa/checklists")
+def get_kisa_checklists():
+    """체크리스트 규칙 전체 조회 (SFR-002)"""
+    rules = get_all_checklist_rules_db()
+    return {
+        "total_rules": len(rules),
+        "rules": rules
+    }
+
+@app.post("/api/kisa/checklists")
+def create_kisa_checklist_rule(req: ChecklistRuleRequest):
+    """신규 소명 규칙 등록 (SFR-002)"""
+    res = add_checklist_rule_db(req.dict())
+    return res
+
+@app.put("/api/kisa/checklists/{rule_id}")
+def update_kisa_checklist_rule(rule_id: str, req: ChecklistRuleRequest):
+    """소명 규칙 수정 (SFR-002)"""
+    res = update_checklist_rule_db(rule_id, req.dict())
+    return res
+
+@app.delete("/api/kisa/checklists/{rule_id}")
+def delete_kisa_checklist_rule(rule_id: str):
+    """소명 규칙 삭제 (SFR-002)"""
+    res = delete_checklist_rule_db(rule_id)
+    return res
 
 # ==============================================================================
 # [통합 호환 라우트] 기존 /api/chat 요청을 지능적으로 라우팅

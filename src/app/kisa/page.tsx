@@ -4,10 +4,12 @@ import React, { useState, useEffect } from 'react';
 import {
   Shield, ShieldCheck, Lock, AlertTriangle, ArrowRight,
   Scale, PhoneCall, Smartphone, Sparkles, CheckCircle2,
-  FileText, Activity, Server, Zap, RefreshCw, ExternalLink
+  FileText, Activity, Server, Zap, RefreshCw, ExternalLink,
+  Settings, Sliders, Database, Monitor, Check
 } from 'lucide-react';
 import ChatWidget from '@/components/ChatWidget';
 import GlobalNav from '@/components/GlobalNav';
+import KisaAdminModal from '@/components/KisaAdminModal';
 import styles from './page.module.css';
 
 interface KpiData {
@@ -36,6 +38,7 @@ interface LawDoc {
 export default function KisaSpamPortal() {
   const [channelView, setChannelView] = useState<'homepage' | 'app_webview'>('homepage');
   const [isWidgetOpen, setIsWidgetOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [metrics, setMetrics] = useState<KpiData>({
     avg_latency_sec: 1.18,
     target_latency_sec: 5.0,
@@ -124,17 +127,28 @@ export default function KisaSpamPortal() {
               className={`${styles.channelBtn} ${channelView === 'homepage' ? styles.channelActive : ''}`}
               onClick={() => setChannelView('homepage')}
             >
-              🖥️ 홈페이지 뷰 (플로팅 위젯)
+              <Monitor size={14} />
+              <span>홈페이지 뷰</span>
             </button>
             <button
               className={`${styles.channelBtn} ${channelView === 'app_webview' ? styles.channelActive : ''}`}
               onClick={() => setChannelView('app_webview')}
             >
-              📱 간편신고 앱 뷰 (모바일 웹뷰)
+              <Smartphone size={14} />
+              <span>간편신고 앱 웹뷰</span>
             </button>
           </div>
 
           <div className={styles.headerRight}>
+            <button
+              type="button"
+              className={styles.adminConsoleBtn}
+              onClick={() => setIsAdminOpen(true)}
+              title="지식정보 및 체크리스트 관리 콘솔 (SFR-002)"
+            >
+              <Settings size={14} />
+              <span>지식·규칙 관리 (SFR-002)</span>
+            </button>
             <div className={styles.securityLiveBadge}>
               <span className={styles.pulseDot} />
               <span>5중 보안 게이트웨이 가동</span>
@@ -324,9 +338,20 @@ export default function KisaSpamPortal() {
                 <h3>지식베이스 등록 법령 및 고시 현황 (3072차원 시맨틱 색인)</h3>
                 <span className={styles.lawsCountBadge}>{laws.length}건 유효</span>
               </div>
-              <span style={{ fontSize: '12px', color: '#64748b' }}>
-                * 법령 개정 시 별도 개발 작업 없이 즉시 질의응답 반영 (SFR-002)
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>
+                  * 법령 개정 시 별도 개발 작업 없이 즉시 질의응답 반영 (SFR-002)
+                </span>
+                <button
+                  type="button"
+                  className={styles.adminConsoleBtn}
+                  onClick={() => setIsAdminOpen(true)}
+                  style={{ padding: '6px 12px', fontSize: '11px' }}
+                >
+                  <Sliders size={13} />
+                  <span>지식·체크리스트 관리 콘솔</span>
+                </button>
+              </div>
             </div>
 
             <div className={styles.lawsGrid}>
@@ -336,7 +361,10 @@ export default function KisaSpamPortal() {
                   <h4 className={styles.lawTitle}>{doc.title}</h4>
                   <div className={styles.lawFooter}>
                     <span>{doc.revision_date}</span>
-                    <span className={styles.lawStatus}>✅ {doc.status}</span>
+                    <span className={styles.lawStatus} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <Check size={12} color="#059669" />
+                      <span>{doc.status}</span>
+                    </span>
                   </div>
                 </div>
               ))}
@@ -398,6 +426,13 @@ export default function KisaSpamPortal() {
           </div>
         </div>
       </footer>
+
+      {/* 6. 지식정보 및 체크리스트 관리자 콘솔 모달 (SFR-002) */}
+      <KisaAdminModal
+        isOpen={isAdminOpen}
+        onClose={() => setIsAdminOpen(false)}
+        onRefreshParent={fetchMetricsAndLaws}
+      />
     </div>
   );
 }
