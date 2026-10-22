@@ -151,12 +151,9 @@ export default function KisaAdminPortal() {
   const getApiBaseUrl = () => {
     if (typeof window !== 'undefined') {
       if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return 'http://localhost:8000';
-      }
-      return `${window.location.protocol}//${window.location.hostname}:8002`;
+      return '';
     }
-    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    return process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   };
 
   // 2FA 로그인 핸들러

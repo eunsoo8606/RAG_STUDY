@@ -100,12 +100,10 @@ export default function ChatWidget({
   const getApiBaseUrl = () => {
     if (typeof window !== 'undefined') {
       if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return 'http://localhost:8000';
-      }
-      return `${window.location.protocol}//${window.location.hostname}:8002`;
+      // Next.js 리버스 프록시(/api/*)를 통해 동일 도메인/포트로 백엔드 통신 (8002 포트 방화벽 미개방 환경 완벽 지원)
+      return '';
     }
-    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    return process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   };
 
   const handleSend = async (textToSend?: string) => {
@@ -134,7 +132,10 @@ export default function ChatWidget({
         })
       });
 
-      if (!res.ok) throw new Error('서버 통신 오류');
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.detail || `서버 통신 오류 (HTTP ${res.status})`);
+      }
       const data = await res.json();
 
       const botMsg: Message = {
@@ -154,14 +155,14 @@ export default function ChatWidget({
       if (onSecurityTraceUpdate && data.security_trace) {
         onSecurityTraceUpdate(data.security_trace, data.recall_at_5 || 0.95);
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error('KISA Chat API Error:', err);
       setMessages((prev) => [
         ...prev,
         {
           id: 'bot-err-' + Date.now(),
           sender: 'bot',
-          text: '⚠️ 백엔드 서비스 연결에 일시적인 장애가 발생했습니다. (FastAPI 서버 8000번 포트 확인 필요)',
+          text: `⚠️ 백엔드 서비스 연결에 일시적인 장애가 발생했습니다. (${err?.message || 'FastAPI 백엔드 서비스 상태 확인 필요'})`,
           timestamp: '방금 전'
         }
       ]);

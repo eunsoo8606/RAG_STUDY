@@ -73,14 +73,11 @@ export default function ChatWidget() {
   };
 
   const getApiBaseUrl = () => {
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      return process.env.NEXT_PUBLIC_API_URL;
-    }
     if (typeof window !== 'undefined') {
-      // 도커 배포 환경: 프론트엔드 호스트(사내서버 IP)의 8002 포트로 동적 연결
-      return `${window.location.protocol}//${window.location.hostname}:8002`;
+      if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+      return '';
     }
-    return 'http://localhost:8002';
+    return process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   };
 
   const generateBotResponse = async (query: string) => {

@@ -726,14 +726,15 @@ def search_spam_laws(query_text: str, n_results: int = 5) -> Tuple[List[Dict[str
             if i == 0:
                 top_similarity = sim
 
+            m = metas[i] if metas and i < len(metas) else {}
             matched_docs.append({
                 "rank": i + 1,
-                "title": metas[i]["title"],
-                "source": metas[i]["source"],
-                "article": metas[i]["article"],
-                "revision_date": metas[i]["revision_date"],
-                "category": metas[i]["category"],
-                "content": docs[i],
+                "title": m.get("title", ""),
+                "source": m.get("source", ""),
+                "article": m.get("article", ""),
+                "revision_date": m.get("revision_date", ""),
+                "category": m.get("category", "법령"),
+                "content": docs[i] if i < len(docs) else "",
                 "similarity": round(sim, 4)
             })
 

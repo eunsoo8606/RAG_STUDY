@@ -196,9 +196,14 @@ def handle_kisa_chat(req: KisaChatRequest):
     - 5중 보안 파이프라인 (인메모리 PII 마스킹, 프롬프트 인젝션 방어, ZDR)
     - 법령 Q&A vs 이용정지 소명 분기 실행
     """
-    res = process_kisa_chat(req.query)
-    res["channel"] = req.channel
-    return res
+    try:
+        res = process_kisa_chat(req.query)
+        res["channel"] = req.channel
+        return res
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"KISA Chat Server Error: {str(e)}")
 
 @app.post("/api/suspension/step")
 def handle_suspension_step(req: SuspensionStepRequest):
