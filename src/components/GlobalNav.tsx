@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Layers, Landmark, ShieldCheck, Sparkles, ExternalLink } from 'lucide-react';
+import { Layers, Landmark, ShieldCheck, CheckCircle } from 'lucide-react';
 import styles from './GlobalNav.module.css';
 
 interface GlobalNavProps {
@@ -20,14 +20,14 @@ export default function GlobalNav({ currentDomain }: GlobalNavProps) {
   return (
     <header className={styles.navHeader}>
       <div className={styles.navContainer}>
-        {/* 브랜드 로고 */}
+        {/* 기업 브랜드 로고 */}
         <Link href="/" className={styles.brandGroup}>
           <div className={styles.brandLogo}>
             <Layers size={20} />
           </div>
           <div className={styles.brandText}>
             <span className={styles.brandName}>DATATREE AI</span>
-            <span className={styles.brandDesc}>공공·특수목적 AI RAG 통합 플랫폼</span>
+            <span className={styles.brandDesc}>공공·특수목적 맞춤형 AI 솔루션</span>
           </div>
         </Link>
 
@@ -39,8 +39,7 @@ export default function GlobalNav({ currentDomain }: GlobalNavProps) {
                 href="/" 
                 className={`${styles.navLink} ${isHub ? styles.navLinkActive : ''}`}
               >
-                <Sparkles size={16} />
-                <span>통합 솔루션 허브</span>
+                <span>솔루션 개요</span>
               </Link>
             </li>
 
@@ -49,7 +48,7 @@ export default function GlobalNav({ currentDomain }: GlobalNavProps) {
                 href="/kcti" 
                 className={`${styles.navLink} ${isKcti ? styles.navLinkActive : ''}`}
               >
-                <Landmark size={16} />
+                <Landmark size={15} />
                 <span>한국문화관광연구원 (KCTI)</span>
                 <span className={`${styles.navBadge} ${styles.navBadgeBlue}`}>연구보고서 RAG</span>
               </Link>
@@ -60,9 +59,9 @@ export default function GlobalNav({ currentDomain }: GlobalNavProps) {
                 href="/kisa" 
                 className={`${styles.navLink} ${isKisa ? styles.navLinkActive : ''}`}
               >
-                <ShieldCheck size={16} />
+                <ShieldCheck size={15} />
                 <span>불법스팸대응센터 (KISA)</span>
-                <span className={`${styles.navBadge} ${styles.navBadgeGreen}`}>5중 보안 & 소명위저드</span>
+                <span className={`${styles.navBadge} ${styles.navBadgeGreen}`}>보안 가드레일</span>
               </Link>
             </li>
           </ul>
@@ -70,9 +69,9 @@ export default function GlobalNav({ currentDomain }: GlobalNavProps) {
 
         {/* 우측 시스템 상태 */}
         <div className={styles.navRight}>
-          <div className={styles.systemStatus} title="ChromaDB 3072차원 벡터 스토어 & FastAPI 백엔드 정상 가동 중">
+          <div className={styles.systemStatus} title="온프레미스 벡터 데이터베이스 및 AI 서비스 정상 가동">
             <span className={styles.statusDot}></span>
-            <span>듀얼 RAG 엔진 가동 중</span>
+            <span>시스템 정상 운영 중</span>
           </div>
         </div>
       </div>
