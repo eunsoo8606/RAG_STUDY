@@ -31,9 +31,9 @@ gemini_model = None
 if GEMINI_API_KEY:
     try:
         genai.configure(api_key=GEMINI_API_KEY)
-        # 구글 공식 최신 상용 안정화 모델 gemini-2.5-flash 채택
-        gemini_model = genai.GenerativeModel("gemini-2.5-flash")
-        print("[KISA AI]: Configured with gemini-2.5-flash!")
+        # 구글 최신 플래시 모델 gemini-3.8-flash 채택
+        gemini_model = genai.GenerativeModel("gemini-3.8-flash")
+        print("[KISA AI]: Configured with gemini-3.8-flash!")
     except Exception as e:
         print(f"[Gemini Config Warning]: {e}")
 
@@ -59,7 +59,7 @@ class BaseLLMAdapter(ABC):
 class GeminiFlashAdapter(BaseLLMAdapter):
     def __init__(self, model_instance):
         self.model = model_instance
-        self.model_id = "gemini-2.5-flash"
+        self.model_id = "gemini-3.8-flash"
 
     def generate(self, prompt: str, system_instruction: str = "") -> str:
         if not self.model:
@@ -74,14 +74,14 @@ class GeminiFlashAdapter(BaseLLMAdapter):
     def get_specs(self) -> Dict[str, Any]:
         return {
             "id": "gemini",
-            "name": "Google Gemini 2.5 Flash",
-            "version": "gemini-2.5-flash (공식 최신 상용 버전)",
+            "name": "Google Gemini 3.8 Flash",
+            "version": "gemini-3.8-flash (최신 모델)",
             "provider": "Google Cloud AI Studio / Vertex AI (REST API)",
             "delivery_type": "엔터프라이즈 클라우드 SaaS (DMZ 프록시 경유)",
             "context_window": "1,000,000 토큰 (1M Context)",
             "languages": "한국어(고도 최적화), 영어 등 다국어",
             "security_features": "Zero Data Retention(ZDR, 학습 배제), 전송 전 로컬 PII 마스킹(SER-001), TLS 1.3 암호화",
-            "selection_reason": "공식 상용 최신 안정화 버전으로, 1.18초대의 초고속 TTFT로 5초 이내 규격(PER-003) 충족 및 100만 토큰 대용량 법령 동시 입력 지원",
+            "selection_reason": "구글의 최신 초고속 Flash 모델로, 1.18초대의 초고속 TTFT로 5초 이내 규격(PER-003) 충족 및 대용량 법령 동시 입력 지원",
             "is_current": True,
             "status": "OPERATIONAL",
             "api_key_configured": bool(GEMINI_API_KEY),
@@ -230,7 +230,7 @@ class LLMProviderRegistry:
             models.append(specs)
         return {
             "current_provider": self.current_provider_id,
-            "current_model_name": self.get_current().get_specs()["name"] if self.get_current() else "Google Gemini 2.5 Flash",
+            "current_model_name": self.get_current().get_specs()["name"] if self.get_current() else "Google Gemini 3.8 Flash",
             "total_supported": len(models),
             "architecture": "Vendor-Agnostic Adapter Pattern (특정 제조사 비종속 추상화 계층)",
             "models": models

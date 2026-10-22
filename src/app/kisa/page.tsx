@@ -182,7 +182,7 @@ export default function KisaSpamPortal() {
                 <span className={styles.kpiValue}>{metrics.avg_latency_sec}s</span>
                 <span className={styles.kpiTarget}>/ 목표 5.0초</span>
               </div>
-              <span className={styles.kpiSubtext}>⚡ Gemini 2.5 Flash 초고속 TTFT</span>
+              <span className={styles.kpiSubtext}>⚡ Gemini 3.8 Flash 초고속 TTFT</span>
             </div>
 
             <div className={styles.kpiCard}>

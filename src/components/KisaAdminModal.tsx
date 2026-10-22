@@ -670,7 +670,7 @@ export default function KisaAdminModal({ isOpen, onClose, onRefreshParent }: Kis
                       벤더 비종속(Vendor-Agnostic) 어댑터 아키텍처 가동 중
                     </strong>
                     <span style={{ fontSize: '11px', background: '#dbeafe', color: '#1e40af', padding: '3px 10px', borderRadius: '9999px', fontWeight: 700 }}>
-                      현재 가동: {currentProvider === 'gemini' ? 'Google Gemini 2.5 Flash' : currentProvider === 'openai_vllm' ? 'OpenAI GPT-4o / vLLM' : 'HyperCLOVA X'}
+                      현재 가동: {currentProvider === 'gemini' ? 'Google Gemini 3.8 Flash' : currentProvider === 'openai_vllm' ? 'OpenAI GPT-4o / vLLM' : 'HyperCLOVA X'}
                     </span>
                   </div>
                   <span className={styles.toolInfo} style={{ fontSize: '12px', lineHeight: 1.6 }}>
