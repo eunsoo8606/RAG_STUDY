@@ -74,9 +74,6 @@ export default function ChatWidget({
     history: 'history_first'
   });
 
-  // 보안 검증 상세 펼침 토글 상태
-  const [expandedTraceId, setExpandedTraceId] = useState<string | null>(null);
-
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
@@ -296,11 +293,11 @@ export default function ChatWidget({
             </button>
           </div>
 
-          {/* 보안 가드레일 배너 */}
+          {/* 개인정보 안심 보호 안내 배너 */}
           <div className={styles.securityBanner}>
             <Lock size={12} className={styles.lockIcon} />
             <span>
-              <strong>국정원 AI보안가이드북 준수</strong>: 전화번호 실시간 비식별화 + Zero Data Retention
+              안내: 상담 중 입력된 개인정보(전화번호 등)는 저장되지 않고 안전하게 보호됩니다.
             </span>
           </div>
 
@@ -416,48 +413,6 @@ export default function ChatWidget({
                         </React.Fragment>
                       ))}
                     </div>
-
-                    {/* 보안 감사 추적 배지 (기본 접힘, 클릭 시 상세 토글) */}
-                    {msg.securityTrace && (
-                      <div className={styles.securityTraceBox}>
-                        <button
-                          type="button"
-                          className={styles.traceHeaderBtn}
-                          onClick={() => setExpandedTraceId(expandedTraceId === msg.id ? null : msg.id)}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Lock size={12} />
-                            <span>5중 보안 검증 통과 ({msg.securityTrace.latency_sec}초)</span>
-                          </div>
-                          <span className={styles.traceToggleText}>
-                            {expandedTraceId === msg.id ? '상세 접기 ▲' : '보안 상세 보기 ▼'}
-                          </span>
-                        </button>
-
-                        {expandedTraceId === msg.id && (
-                          <div className={styles.traceGrid} style={{ marginTop: '8px', paddingTop: '6px', borderTop: '1px dashed #e2e8f0' }}>
-                            <div className={styles.traceItem}>
-                              <span className={styles.traceKey}>PII 비식별화</span>
-                              <span className={styles.traceValGreen}>
-                                {msg.securityTrace.is_masked ? `🛡️ ${msg.securityTrace.detected_pii.length}건 마스킹 완료` : '✅ 민감정보 없음'}
-                              </span>
-                            </div>
-                            <div className={styles.traceItem}>
-                              <span className={styles.traceKey}>ZDR 데이터 정책</span>
-                              <span className={styles.traceVal}>디스크 미저장 (0 Byte)</span>
-                            </div>
-                            <div className={styles.traceItem}>
-                              <span className={styles.traceKey}>Recall@5 검색</span>
-                              <span className={styles.traceValBlue}>Recall: 1.0 (정답 상위배치)</span>
-                            </div>
-                            <div className={styles.traceItem}>
-                              <span className={styles.traceKey}>응답 지연시간</span>
-                              <span className={styles.traceVal}>{msg.securityTrace.latency_sec}초 (기준 5초 이내)</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
 
                     {/* 근거 조문 칩 (W1 팩트그라운딩) */}
                     {msg.referencedLaws && msg.referencedLaws.length > 0 && (

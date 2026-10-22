@@ -374,7 +374,7 @@ export default function DatatreeHubPage() {
             </h3>
 
             <p className={styles.cardDesc}>
-              국가정보원 AI 보안 가이드라인 준수를 입증하기 위해, 인메모리 PII 실시간 마스킹과 
+              국가정보원 AI 보안 가이드라인 준수를 입증하기 위해, 인메모리 PII 실시간 마스킹과
               분쟁 원천 차단을 위한 100% 규칙 기반(시행령 제62조의4) 소명 위저드를 구현한 실증 모델입니다.
             </p>
 
